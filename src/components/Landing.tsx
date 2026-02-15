@@ -13,18 +13,20 @@ export function Landing() {
         </p>
         <a
           href="/login"
-          className="inline-flex items-center justify-center bg-ctp-mauve hover:bg-ctp-mauve/90 text-white px-8 py-3 rounded-lg font-medium transition-colors text-lg"
+          className="inline-flex items-center justify-center bg-ctp-mauve hover:bg-ctp-mauve/90 text-white px-10 py-4 rounded-xl font-semibold transition-colors text-lg shadow-sm"
         >
-          Get Started
+          Get Started →
         </a>
+
         <div className="text-ctp-overlay0 text-sm">
           Already have an account?{" "}
-          <a href="/login" className="text-ctp-mauve hover:text-ctp-lavender">
+          <a href="/login" className="font-medium underline underline-offset-4">
             Sign in
           </a>
-        </div>
-        <div className="text-ctp-overlay0 text-xs">
-          If the button ever doesn’t show, open: <a href="/login" className="underline">/login</a>
+          {" "}·{" "}
+          <a href="/login" className="font-medium underline underline-offset-4">
+            Create account
+          </a>
         </div>
       </div>
       <footer className="absolute bottom-6 text-ctp-overlay0 text-sm">
