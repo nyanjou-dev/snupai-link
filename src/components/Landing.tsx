@@ -13,18 +13,22 @@ export function Landing() {
         </p>
         <a
           href="/login"
-          className="inline-flex items-center justify-center bg-ctp-mauve hover:bg-ctp-mauve/90 text-white px-10 py-4 rounded-xl font-semibold transition-colors text-lg shadow-sm"
+          className="inline-flex items-center justify-center px-10 py-4 rounded-xl font-semibold text-lg shadow-sm"
+          style={{
+            background: "var(--ctp-mauve)",
+            color: "#11111b",
+          }}
         >
           Get Started →
         </a>
 
-        <div className="text-ctp-overlay0 text-sm">
+        <div className="text-sm" style={{ color: "var(--ctp-overlay0)" }}>
           Already have an account?{" "}
-          <a href="/login" className="font-medium underline underline-offset-4">
+          <a href="/login" className="font-medium underline underline-offset-4" style={{ color: "var(--ctp-mauve)" }}>
             Sign in
           </a>
           {" "}·{" "}
-          <a href="/login" className="font-medium underline underline-offset-4">
+          <a href="/login" className="font-medium underline underline-offset-4" style={{ color: "var(--ctp-mauve)" }}>
             Create account
           </a>
         </div>

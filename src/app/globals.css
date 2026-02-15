@@ -15,6 +15,11 @@
   --accent-hover: color-mix(in srgb, var(--ctp-mauve) 90%, white);
 }
 
+html, body {
+  background: var(--ctp-base);
+  color: var(--ctp-text);
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--ctp-surface1) transparent;
