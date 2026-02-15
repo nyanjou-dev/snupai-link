@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# snupai-link
 
-## Getting Started
+A clean, modern link shortener for **snupai.link**.
 
-First, run the development server:
+## Stack
+- Next.js (App Router) + TypeScript + Tailwind
+- Convex (DB + functions + auth)
+- Deploy: Vercel
 
+## Features
+- Password auth (Convex Auth)
+- Create short links with custom slugs
+- Redirects at `/{slug}`
+- Click tracking (count + referrer + timestamp + user agent)
+- Dashboard to manage links
+
+## Local development
+
+1) Install deps
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2) Add secrets to `.env.local` (**do not commit**)
+```bash
+CONVEX_DEPLOYMENT=...
+NEXT_PUBLIC_CONVEX_URL=...
+CONVEX_DEPLOY_KEY=...
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3) (Recommended) Set Convex Auth keys in your Convex deployment
+```bash
+node generateKeys.mjs
+# then set JWT_PRIVATE_KEY + JWKS in the Convex dashboard or via:
+# printf '%s' "$JWT_PRIVATE_KEY" | npx convex env set JWT_PRIVATE_KEY
+# printf '%s' "$JWKS" | npx convex env set JWKS
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4) Run Convex (generates `convex/_generated`)
+```bash
+npx convex dev
+```
 
-## Learn More
+5) Run Next.js
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Open http://localhost:3000
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deploy (Vercel)
+Set the same env vars in Vercel (`CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, and any Convex Auth env vars like `JWT_PRIVATE_KEY` and `JWKS`).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
