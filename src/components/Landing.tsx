@@ -1,4 +1,4 @@
-import Link from "next/link";
+"use client";
 
 export function Landing() {
   return (
@@ -11,17 +11,20 @@ export function Landing() {
         <p className="text-ctp-subtext1 text-lg">
           Clean, fast link shortener. Track clicks, manage links, look good doing it.
         </p>
-        <Link
+        <a
           href="/login"
           className="inline-flex items-center justify-center bg-ctp-mauve hover:bg-ctp-mauve/90 text-white px-8 py-3 rounded-lg font-medium transition-colors text-lg"
         >
           Get Started
-        </Link>
+        </a>
         <div className="text-ctp-overlay0 text-sm">
           Already have an account?{" "}
-          <Link href="/login" className="text-ctp-mauve hover:text-ctp-lavender">
+          <a href="/login" className="text-ctp-mauve hover:text-ctp-lavender">
             Sign in
-          </Link>
+          </a>
+        </div>
+        <div className="text-ctp-overlay0 text-xs">
+          If the button ever doesn’t show, open: <a href="/login" className="underline">/login</a>
         </div>
       </div>
       <footer className="absolute bottom-6 text-ctp-overlay0 text-sm">
