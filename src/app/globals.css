@@ -1,11 +1,21 @@
 @import "tailwindcss";
 
+/* Catppuccin Mocha tokens (CSS vars for non-tailwind bits) */
 :root {
-  --accent: #a855f7;
-  --accent-hover: #9333ea;
+  --ctp-base: #1e1e2e;
+  --ctp-mantle: #181825;
+  --ctp-crust: #11111b;
+  --ctp-surface0: #313244;
+  --ctp-surface1: #45475a;
+  --ctp-overlay0: #6c7086;
+  --ctp-text: #cdd6f4;
+  --ctp-mauve: #cba6f7;
+
+  --accent: var(--ctp-mauve);
+  --accent-hover: color-mix(in srgb, var(--ctp-mauve) 90%, white);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #3f3f46 transparent;
+  scrollbar-color: var(--ctp-surface1) transparent;
 }

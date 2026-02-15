@@ -28,16 +28,16 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-6">
         {onBack && (
-          <button onClick={onBack} className="text-zinc-500 hover:text-zinc-300 text-sm">
+          <button onClick={onBack} className="text-ctp-subtext0 hover:text-ctp-subtext1 text-sm">
             ← Back
           </button>
         )}
         <div className="text-center">
           <h1 className="text-3xl font-bold">
-            <span className="text-purple-400">snupai</span>
-            <span className="text-zinc-400">.link</span>
+            <span className="text-ctp-mauve">snupai</span>
+            <span className="text-ctp-subtext1">.link</span>
           </h1>
-          <p className="text-zinc-500 mt-2">
+          <p className="text-ctp-subtext0 mt-2">
             {flow === "signIn" ? "Welcome back" : "Create your account"}
           </p>
         </div>
@@ -48,7 +48,7 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-purple-500 transition-colors"
+            className="w-full bg-ctp-mantle border border-ctp-surface0 rounded-lg px-4 py-3 text-ctp-text placeholder-ctp-overlay0 focus:outline-none focus:border-ctp-mauve transition-colors"
             required
           />
           <input
@@ -56,24 +56,24 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-purple-500 transition-colors"
+            className="w-full bg-ctp-mantle border border-ctp-surface0 rounded-lg px-4 py-3 text-ctp-text placeholder-ctp-overlay0 focus:outline-none focus:border-ctp-mauve transition-colors"
             required
           />
           {error && <p className="text-red-400 text-sm">{error}</p>}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-3 rounded-lg font-medium transition-colors"
+            className="w-full bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 text-white py-3 rounded-lg font-medium transition-colors"
           >
             {loading ? "..." : flow === "signIn" ? "Sign In" : "Sign Up"}
           </button>
         </form>
 
-        <p className="text-center text-zinc-500 text-sm">
+        <p className="text-center text-ctp-subtext0 text-sm">
           {flow === "signIn" ? "No account? " : "Already have one? "}
           <button
             onClick={() => setFlow(flow === "signIn" ? "signUp" : "signIn")}
-            className="text-purple-400 hover:text-purple-300"
+            className="text-ctp-mauve hover:text-ctp-lavender"
           >
             {flow === "signIn" ? "Sign up" : "Sign in"}
           </button>

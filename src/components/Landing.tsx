@@ -12,20 +12,20 @@ export function Landing() {
     <div className="min-h-screen flex flex-col items-center justify-center px-4">
       <div className="text-center space-y-6 max-w-lg">
         <h1 className="text-5xl font-bold tracking-tight">
-          <span className="text-purple-400">snupai</span>
-          <span className="text-zinc-400">.link</span>
+          <span className="text-ctp-mauve">snupai</span>
+          <span className="text-ctp-subtext1">.link</span>
         </h1>
-        <p className="text-zinc-400 text-lg">
+        <p className="text-ctp-subtext1 text-lg">
           Clean, fast link shortener. Track clicks, manage links, look good doing it.
         </p>
         <button
           onClick={() => setShowAuth(true)}
-          className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-lg font-medium transition-colors text-lg"
+          className="bg-ctp-mauve hover:bg-ctp-mauve/90 text-white px-8 py-3 rounded-lg font-medium transition-colors text-lg"
         >
           Get Started
         </button>
       </div>
-      <footer className="absolute bottom-6 text-zinc-600 text-sm">
+      <footer className="absolute bottom-6 text-ctp-overlay0 text-sm">
         made with 💜 by snupai
       </footer>
     </div>
