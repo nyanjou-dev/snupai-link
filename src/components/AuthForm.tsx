@@ -8,6 +8,7 @@ import { useState } from "react";
 export function AuthForm({ onBack }: { onBack?: () => void }) {
   const { signIn } = useAuthActions();
   const cleanupAuth = useMutation(api.authMaintenance.cleanupInvalidAuthReferences);
+  const allowSignup = process.env.NEXT_PUBLIC_ALLOW_SIGNUP !== "false";
   const [flow, setFlow] = useState<"signIn" | "signUp">("signIn");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,6 +20,10 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
     setError("");
     setLoading(true);
     try {
+      if (!allowSignup && flow === "signUp") {
+        setError("Sign up is disabled.");
+        return;
+      }
       await signIn("password", { email, password, flow });
       // Send users straight to dashboard after auth.
       window.location.href = "/dashboard";
@@ -86,15 +91,19 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
           </button>
         </form>
 
-        <p className="text-center text-ctp-subtext0 text-sm">
-          {flow === "signIn" ? "No account? " : "Already have one? "}
-          <button
-            onClick={() => setFlow(flow === "signIn" ? "signUp" : "signIn")}
-            className="text-ctp-mauve hover:text-ctp-lavender"
-          >
-            {flow === "signIn" ? "Sign up" : "Sign in"}
-          </button>
-        </p>
+        {allowSignup ? (
+          <p className="text-center text-ctp-subtext0 text-sm">
+            {flow === "signIn" ? "No account? " : "Already have one? "}
+            <button
+              onClick={() => setFlow(flow === "signIn" ? "signUp" : "signIn")}
+              className="text-ctp-mauve hover:text-ctp-lavender"
+            >
+              {flow === "signIn" ? "Sign up" : "Sign in"}
+            </button>
+          </p>
+        ) : (
+          <p className="text-center text-ctp-subtext0 text-sm">Sign-ups are disabled.</p>
+        )}
       </div>
     </div>
   );
