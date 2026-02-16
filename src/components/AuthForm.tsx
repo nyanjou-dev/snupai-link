@@ -1,9 +1,9 @@
 "use client";
 
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useConvex, useConvexAuth, useMutation, useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 function getErrorMessage(err: unknown) {
@@ -23,57 +23,28 @@ function readLoginParams() {
   };
 }
 
-const SESSION_RECOVERY_TIMEOUT_MS = 25000;
-const SESSION_RECOVERY_POLL_MS = 2500;
-const SLOW_SIGNIN_HINT_MS = 8000;
-
 export function AuthForm({ onBack }: { onBack?: () => void }) {
   const { signIn } = useAuthActions();
-  const convex = useConvex();
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const authDiagnostics = useQuery(api.session.authDiagnostics);
-  const cleanupAuth = useMutation(api.authMaintenance.cleanupInvalidAuthReferences);
   const router = useRouter();
+
   const allowSignup = process.env.NEXT_PUBLIC_ALLOW_SIGNUP !== "false";
+
   const [flow, setFlow] = useState<"signIn" | "signUp">("signIn");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [waitingForSession, setWaitingForSession] = useState(false);
-  const [showSlowSigninHint, setShowSlowSigninHint] = useState(false);
-  const [showContinueFallback, setShowContinueFallback] = useState(false);
-  const [phaseMessage, setPhaseMessage] = useState("");
   const [reason, setReason] = useState("");
   const [nextPath, setNextPath] = useState("");
-  const waitingStartedAtRef = useRef<number | null>(null);
-  const redirectInProgressRef = useRef(false);
 
   const targetPath = nextPath || "/dashboard";
+
   const authConfigMismatch =
     authDiagnostics !== undefined && authDiagnostics !== null
       ? !authDiagnostics.authDomainMatchesConvexSite
       : false;
-
-  const verifySession = useCallback(async () => {
-    try {
-      const me = await convex.query(api.session.me, {});
-      return Boolean(me?.userId);
-    } catch {
-      return false;
-    }
-  }, [convex]);
-
-  const finishSignIn = useCallback(() => {
-    if (redirectInProgressRef.current) return;
-    redirectInProgressRef.current = true;
-    setWaitingForSession(false);
-    setShowSlowSigninHint(false);
-    setShowContinueFallback(false);
-    setPhaseMessage("Signed in. Redirecting…");
-    setError("");
-    router.replace(targetPath);
-  }, [router, targetPath]);
 
   useEffect(() => {
     const { reason, next } = readLoginParams();
@@ -93,101 +64,27 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
 
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
-    finishSignIn();
-  }, [authLoading, finishSignIn, isAuthenticated]);
+    router.replace(targetPath);
+  }, [authLoading, isAuthenticated, router, targetPath]);
 
-  useEffect(() => {
-    if (!waitingForSession) {
-      waitingStartedAtRef.current = null;
-      setShowSlowSigninHint(false);
-      if (!redirectInProgressRef.current) {
-        setPhaseMessage("");
-      }
-      return;
-    }
-
-    waitingStartedAtRef.current = Date.now();
-    setPhaseMessage("Finishing sign-in…");
-
-    const hintTimer = window.setTimeout(() => {
-      setShowSlowSigninHint(true);
-      setPhaseMessage("Still waiting for your session to sync…");
-    }, SLOW_SIGNIN_HINT_MS);
-
-    const pollTimer = window.setInterval(async () => {
-      const verified = await verifySession();
-      if (verified) {
-        finishSignIn();
-        return;
-      }
-
-      const waitingStartedAt = waitingStartedAtRef.current;
-      if (waitingStartedAt && Date.now() - waitingStartedAt >= SESSION_RECOVERY_TIMEOUT_MS) {
-        setWaitingForSession(false);
-        setShowSlowSigninHint(false);
-        setShowContinueFallback(true);
-        setPhaseMessage("Session sync is taking longer than expected.");
-        setError("You can retry sign-in, or continue to dashboard and let the app re-check your session.");
-      }
-    }, SESSION_RECOVERY_POLL_MS);
-
-    return () => {
-      window.clearTimeout(hintTimer);
-      window.clearInterval(pollTimer);
-    };
-  }, [finishSignIn, verifySession, waitingForSession]);
-
-  const attemptSignIn = useCallback(async () => {
-    waitingStartedAtRef.current = null;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError("");
-    setWaitingForSession(false);
-    setShowSlowSigninHint(false);
-    setShowContinueFallback(false);
     setLoading(true);
-    setPhaseMessage(flow === "signIn" ? "Signing you in…" : "Creating account…");
 
     try {
       if (!allowSignup && flow === "signUp") {
         setError("Sign up is disabled.");
-        setPhaseMessage("");
         return;
       }
 
-      const result = await signIn("password", { email, password, flow });
-      if (result.signingIn) {
-        setWaitingForSession(true);
-        return;
-      }
-
-      setPhaseMessage("Verifying your session…");
-      const verified = await verifySession();
-      if (verified) {
-        finishSignIn();
-      } else {
-        setWaitingForSession(true);
-      }
+      await signIn("password", { email, password, flow });
+      // Redirect is handled by useConvexAuth effect once auth state updates.
     } catch (err: unknown) {
-      const message = getErrorMessage(err);
-
-      if (message.includes("InvalidAccountId")) {
-        try {
-          await cleanupAuth();
-          setError("Fixed stale auth data. Please try again.");
-        } catch {
-          setError("Auth data looks stale. Please refresh and try again.");
-        }
-      } else {
-        setError(message);
-      }
-      setPhaseMessage("");
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  }, [allowSignup, cleanupAuth, email, finishSignIn, flow, password, signIn, verifySession]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await attemptSignIn();
   };
 
   const loginMessage = reason === "session-expired" ? "Your session expired. Please sign in again." : "";
@@ -238,49 +135,14 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
             className="w-full bg-ctp-mantle border border-ctp-surface0 rounded-lg px-4 py-3 text-ctp-text placeholder-ctp-overlay0 focus:outline-none focus:border-ctp-mauve transition-colors"
             required
           />
-          {phaseMessage && !error && (
-            <p className="rounded-lg border border-ctp-surface0 bg-ctp-mantle px-3 py-2 text-sm text-ctp-subtext1">
-              {phaseMessage}
-            </p>
-          )}
           {error && <p className="text-red-400 text-sm">{error}</p>}
-          {waitingForSession && (
-            <p className="rounded-lg border border-ctp-surface0 bg-ctp-mantle px-3 py-2 text-sm text-ctp-subtext1">
-              {showSlowSigninHint
-                ? "Still signing you in… network/session sync can be slow. You can retry anytime."
-                : "Waiting for session…"}
-            </p>
-          )}
           <button
             type="submit"
-            disabled={loading || waitingForSession}
+            disabled={loading}
             className="w-full bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 text-white py-3 rounded-lg font-medium transition-colors"
           >
-            {waitingForSession ? "Waiting for session…" : loading ? "..." : flow === "signIn" ? "Sign In" : "Sign Up"}
+            {loading ? "..." : flow === "signIn" ? "Sign In" : "Sign Up"}
           </button>
-          {(waitingForSession || showContinueFallback) && (
-            <button
-              type="button"
-              disabled={loading}
-              onClick={attemptSignIn}
-              className="w-full border border-ctp-surface0 hover:border-ctp-surface1 disabled:opacity-50 text-ctp-subtext1 py-3 rounded-lg font-medium transition-colors"
-            >
-              Retry sign-in
-            </button>
-          )}
-          {showContinueFallback && (
-            <button
-              type="button"
-              onClick={() => {
-                setError("");
-                setPhaseMessage("Continuing to dashboard…");
-                router.replace(targetPath);
-              }}
-              className="w-full border border-ctp-surface0 hover:border-ctp-surface1 text-ctp-subtext1 py-3 rounded-lg font-medium transition-colors"
-            >
-              Continue to dashboard
-            </button>
-          )}
         </form>
 
         {allowSignup ? (
