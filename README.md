@@ -81,5 +81,3 @@ Open http://localhost:3000
 
 Set the same env vars in Vercel: `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, and Convex Auth keys (`JWT_PRIVATE_KEY`, `JWKS`). On Convex, ensure `CONVEX_SITE_URL` and `SITE_URL` are set ([Convex Auth production](https://labs.convex.dev/auth/production)).
 
-This project uses a [patch](patches/) on `@convex-dev/auth` (token_endpoint + CORS on discovery) so auth works in production; applied via `postinstall`.
-
