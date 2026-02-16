@@ -35,6 +35,7 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [waitingForSession, setWaitingForSession] = useState(false);
+  const [showSlowSigninHint, setShowSlowSigninHint] = useState(false);
   const [reason, setReason] = useState("");
   const [nextPath, setNextPath] = useState("");
 
@@ -48,25 +49,28 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
     if (!waitingForSession || authLoading) return;
     if (!isAuthenticated) return;
 
+    setWaitingForSession(false);
+    setShowSlowSigninHint(false);
     router.replace(nextPath || "/dashboard");
   }, [authLoading, isAuthenticated, nextPath, router, waitingForSession]);
 
   useEffect(() => {
-    if (!waitingForSession) return;
+    if (!waitingForSession) {
+      setShowSlowSigninHint(false);
+      return;
+    }
 
-    const timeout = window.setTimeout(() => {
-      if (!isAuthenticated) {
-        setWaitingForSession(false);
-        setError("Sign-in took too long. Please try again.");
-      }
+    const hintTimer = window.setTimeout(() => {
+      setShowSlowSigninHint(true);
     }, 8000);
 
-    return () => window.clearTimeout(timeout);
-  }, [isAuthenticated, waitingForSession]);
+    return () => window.clearTimeout(hintTimer);
+  }, [waitingForSession]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setShowSlowSigninHint(false);
     setLoading(true);
     try {
       if (!allowSignup && flow === "signUp") {
@@ -138,13 +142,32 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
             required
           />
           {error && <p className="text-red-400 text-sm">{error}</p>}
+          {waitingForSession && (
+            <p className="rounded-lg border border-ctp-surface0 bg-ctp-mantle px-3 py-2 text-sm text-ctp-subtext1">
+              {showSlowSigninHint
+                ? "Still signing you in… mobile networks can be slow. You can keep waiting or retry."
+                : "Finishing sign-in…"}
+            </p>
+          )}
           <button
             type="submit"
             disabled={loading || waitingForSession}
             className="w-full bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 text-white py-3 rounded-lg font-medium transition-colors"
           >
-            {waitingForSession ? "Finishing sign-in…" : loading ? "..." : flow === "signIn" ? "Sign In" : "Sign Up"}
+            {waitingForSession ? "Waiting for session…" : loading ? "..." : flow === "signIn" ? "Sign In" : "Sign Up"}
           </button>
+          {waitingForSession && (
+            <button
+              type="button"
+              onClick={() => {
+                setWaitingForSession(false);
+                setShowSlowSigninHint(false);
+              }}
+              className="w-full border border-ctp-surface0 hover:border-ctp-surface1 text-ctp-subtext1 py-3 rounded-lg font-medium transition-colors"
+            >
+              Retry sign-in
+            </button>
+          )}
         </form>
 
         {allowSignup ? (
