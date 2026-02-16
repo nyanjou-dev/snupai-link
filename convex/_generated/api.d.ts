@@ -12,6 +12,7 @@ import type * as auth from "../auth.js";
 import type * as authMaintenance from "../authMaintenance.js";
 import type * as http from "../http.js";
 import type * as links from "../links.js";
+import type * as session from "../session.js";
 
 import type {
   ApiFromModules,
@@ -24,6 +25,7 @@ declare const fullApi: ApiFromModules<{
   authMaintenance: typeof authMaintenance;
   http: typeof http;
   links: typeof links;
+  session: typeof session;
 }>;
 
 /**
