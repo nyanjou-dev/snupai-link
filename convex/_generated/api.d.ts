@@ -9,6 +9,7 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as authMaintenance from "../authMaintenance.js";
 import type * as http from "../http.js";
 import type * as links from "../links.js";
 
@@ -20,6 +21,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  authMaintenance: typeof authMaintenance;
   http: typeof http;
   links: typeof links;
 }>;

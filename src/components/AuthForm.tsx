@@ -1,10 +1,13 @@
 "use client";
 
 import { useAuthActions } from "@convex-dev/auth/react";
+import { useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { useState } from "react";
 
 export function AuthForm({ onBack }: { onBack?: () => void }) {
   const { signIn } = useAuthActions();
+  const cleanupAuth = useMutation(api.authMaintenance.cleanupInvalidAuthReferences);
   const [flow, setFlow] = useState<"signIn" | "signUp">("signIn");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,7 +21,18 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
     try {
       await signIn("password", { email, password, flow });
     } catch (err: any) {
-      setError(err.message || "Something went wrong");
+      const message = String(err?.message || "Something went wrong");
+
+      if (message.includes("InvalidAccountId")) {
+        try {
+          await cleanupAuth();
+          setError("Fixed stale auth data. Please try again.");
+        } catch {
+          setError("Auth data looks stale. Please refresh and try again.");
+        }
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
