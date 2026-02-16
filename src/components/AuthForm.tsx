@@ -1,9 +1,9 @@
 "use client";
 
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useConvexAuth, useMutation } from "convex/react";
+import { useConvex, useConvexAuth, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 function getErrorMessage(err: unknown) {
@@ -23,8 +23,13 @@ function readLoginParams() {
   };
 }
 
+const SESSION_RECOVERY_TIMEOUT_MS = 25000;
+const SESSION_RECOVERY_POLL_MS = 2500;
+const SLOW_SIGNIN_HINT_MS = 8000;
+
 export function AuthForm({ onBack }: { onBack?: () => void }) {
   const { signIn } = useAuthActions();
+  const convex = useConvex();
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const cleanupAuth = useMutation(api.authMaintenance.cleanupInvalidAuthReferences);
   const router = useRouter();
@@ -38,6 +43,17 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
   const [showSlowSigninHint, setShowSlowSigninHint] = useState(false);
   const [reason, setReason] = useState("");
   const [nextPath, setNextPath] = useState("");
+  const waitingStartedAtRef = useRef<number | null>(null);
+  const redirectInProgressRef = useRef(false);
+
+  const finishSignIn = useCallback(() => {
+    if (redirectInProgressRef.current) return;
+    redirectInProgressRef.current = true;
+    setWaitingForSession(false);
+    setShowSlowSigninHint(false);
+    setError("");
+    router.replace(nextPath || "/dashboard");
+  }, [nextPath, router]);
 
   useEffect(() => {
     const { reason, next } = readLoginParams();
@@ -49,27 +65,53 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
     if (!waitingForSession || authLoading) return;
     if (!isAuthenticated) return;
 
-    setWaitingForSession(false);
-    setShowSlowSigninHint(false);
-    router.replace(nextPath || "/dashboard");
-  }, [authLoading, isAuthenticated, nextPath, router, waitingForSession]);
+    finishSignIn();
+  }, [authLoading, finishSignIn, isAuthenticated, waitingForSession]);
 
   useEffect(() => {
     if (!waitingForSession) {
+      waitingStartedAtRef.current = null;
       setShowSlowSigninHint(false);
+      redirectInProgressRef.current = false;
       return;
     }
 
+    waitingStartedAtRef.current = Date.now();
+
     const hintTimer = window.setTimeout(() => {
       setShowSlowSigninHint(true);
-    }, 8000);
+    }, SLOW_SIGNIN_HINT_MS);
 
-    return () => window.clearTimeout(hintTimer);
-  }, [waitingForSession]);
+    const pollTimer = window.setInterval(async () => {
+      try {
+        const me = await convex.query(api.session.me, {});
+        if (me?.userId) {
+          finishSignIn();
+          return;
+        }
+      } catch {
+        // Ignore transient polling errors while waiting for auth/session propagation.
+      }
+
+      const waitingStartedAt = waitingStartedAtRef.current;
+      if (waitingStartedAt && Date.now() - waitingStartedAt >= SESSION_RECOVERY_TIMEOUT_MS) {
+        setWaitingForSession(false);
+        setShowSlowSigninHint(false);
+        setError("We couldn't confirm your session yet. Please tap Sign In again.");
+      }
+    }, SESSION_RECOVERY_POLL_MS);
+
+    return () => {
+      window.clearTimeout(hintTimer);
+      window.clearInterval(pollTimer);
+    };
+  }, [convex, finishSignIn, waitingForSession]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    waitingStartedAtRef.current = null;
     setError("");
+    setWaitingForSession(false);
     setShowSlowSigninHint(false);
     setLoading(true);
     try {
@@ -80,6 +122,11 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
       const result = await signIn("password", { email, password, flow });
       if (result.signingIn) {
         setWaitingForSession(true);
+      } else {
+        const me = await convex.query(api.session.me, {});
+        if (me?.userId) {
+          finishSignIn();
+        }
       }
     } catch (err: unknown) {
       const message = getErrorMessage(err);
@@ -162,6 +209,7 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
               onClick={() => {
                 setWaitingForSession(false);
                 setShowSlowSigninHint(false);
+                setError("");
               }}
               className="w-full border border-ctp-surface0 hover:border-ctp-surface1 text-ctp-subtext1 py-3 rounded-lg font-medium transition-colors"
             >
