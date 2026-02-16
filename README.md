@@ -10,9 +10,38 @@ A clean, modern link shortener for **snupai.link**.
 ## Features
 - Password auth (Convex Auth)
 - Create short links with custom slugs
+- Optional expiry date/time per link
+- Optional max-click cap per link
 - Redirects at `/{slug}`
 - Click tracking (count + referrer + timestamp + user agent)
+- Dashboard analytics (top links, recent clicks, top referrers)
+- Per-link QR code with download/copy actions
 - Dashboard to manage links
+
+## Using link controls & analytics
+
+### Expiry
+- In **Create Short Link**, set **Expiry (optional)** using your local timezone.
+- Expired links redirect to `/unavailable?reason=expired`.
+- Minimum lead time is 1 minute from now.
+
+### Max clicks
+- Set **Click limit (optional)** to a whole number between `1` and `1,000,000`.
+- When limit is reached, the short link redirects to `/unavailable?reason=max-clicks`.
+
+### QR actions
+- Each link card shows a small QR preview for quick scan checks.
+- Open a link’s details to use:
+  - **Download PNG** (saves `{slug}-target-qr.png`)
+  - **Copy image** (when clipboard image API is available in your browser)
+
+### Analytics basics
+- **Analytics** panel (dashboard) shows:
+  - top links by click count
+  - recent click activity
+- Per-link details show:
+  - recent click events (time, referrer, user agent)
+  - top referrers for that link
 
 ## Local development
 

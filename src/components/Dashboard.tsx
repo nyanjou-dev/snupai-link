@@ -13,6 +13,11 @@ const MIN_MAX_CLICKS = 1;
 const MAX_MAX_CLICKS = 1_000_000;
 const MIN_EXPIRY_MS_FROM_NOW = 60_000;
 
+function getErrorMessage(err: unknown) {
+  if (err instanceof Error && err.message) return err.message;
+  return "Failed to create link";
+}
+
 export function Dashboard() {
   const links = useQuery(api.links.list);
   const analytics = useQuery(api.links.analyticsOverview, { topLimit: 5, recentLimit: 15 });
@@ -75,8 +80,8 @@ export function Dashboard() {
       setUrl("");
       setMaxClicksInput("");
       setExpiresAtInput("");
-    } catch (err: any) {
-      setError(err.message || "Failed to create link");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       setCreating(false);
     }

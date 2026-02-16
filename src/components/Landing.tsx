@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 export function Landing() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4">
@@ -12,12 +14,12 @@ export function Landing() {
           Clean, fast link shortener. Track clicks, manage links, look good doing it.
         </p>
 
-        <a
+        <Link
           href="/login"
           className="inline-flex items-center justify-center px-10 py-4 rounded-xl font-semibold text-lg shadow-sm bg-ctp-mauve text-ctp-crust hover:bg-ctp-mauve/90 transition-colors"
         >
           Get Started →
-        </a>
+        </Link>
       </div>
 
       <footer className="absolute bottom-6 text-ctp-overlay0 text-sm">made with 💜 by snupai</footer>

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 type UnavailablePageProps = {
   searchParams?: Promise<{ reason?: string }>;
 };
@@ -35,12 +37,12 @@ export default async function UnavailablePage({ searchParams }: UnavailablePageP
         <p className="text-ctp-subtext0">{content.description}</p>
         <p className="text-ctp-overlay0 text-sm">If you still need access, ask the person who shared this link for a new one.</p>
 
-        <a
+        <Link
           href="/"
           className="inline-flex items-center justify-center rounded-lg border border-ctp-surface1 bg-ctp-base px-4 py-2 text-sm text-ctp-subtext1 hover:text-ctp-text hover:border-ctp-mauve transition-colors"
         >
           Back to snupai.link
-        </a>
+        </Link>
       </div>
     </main>
   );

@@ -5,6 +5,11 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useState } from "react";
 
+function getErrorMessage(err: unknown) {
+  if (err instanceof Error && err.message) return err.message;
+  return "Something went wrong";
+}
+
 export function AuthForm({ onBack }: { onBack?: () => void }) {
   const { signIn } = useAuthActions();
   const cleanupAuth = useMutation(api.authMaintenance.cleanupInvalidAuthReferences);
@@ -28,8 +33,8 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
       // Send users straight to dashboard after auth.
       window.location.href = "/dashboard";
       return;
-    } catch (err: any) {
-      const message = String(err?.message || "Something went wrong");
+    } catch (err: unknown) {
+      const message = getErrorMessage(err);
 
       if (message.includes("InvalidAccountId")) {
         try {
