@@ -19,7 +19,7 @@ export default async function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${inter.className} bg-ctp-base text-ctp-text min-h-screen`}>
-        <ConvexAuthNextjsServerProvider verbose>
+        <ConvexAuthNextjsServerProvider>
           <ConvexAuthProvider>{children}</ConvexAuthProvider>
         </ConvexAuthNextjsServerProvider>
       </body>

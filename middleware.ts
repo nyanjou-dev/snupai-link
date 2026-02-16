@@ -6,17 +6,12 @@ import {
 
 const isProtectedRoute = createRouteMatcher(["/dashboard(.*)"]);
 
-export default convexAuthNextjsMiddleware(
-  async (request, { convexAuth }) => {
-    if (isProtectedRoute(request) && !(await convexAuth.isAuthenticated())) {
-      return nextjsMiddlewareRedirect(request, "/login");
-    }
-  },
-  {
-    verbose: true,
-  },
-);
+export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
+  if (isProtectedRoute(request) && !(await convexAuth.isAuthenticated())) {
+    return nextjsMiddlewareRedirect(request, "/login");
+  }
+});
 
 export const config = {
-  matcher: ["/((?!_next|.*\\..*).*)", "/", "/api/auth(.*)"],
+  matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
 };
