@@ -8,8 +8,14 @@ import { Id } from "../../convex/_generated/dataModel";
 import { ClickDetails } from "./ClickDetails";
 import { LinkQRCode } from "./LinkQRCode";
 
+function formatDateTime(timestamp?: number) {
+  if (!timestamp) return "Never";
+  return new Date(timestamp).toLocaleString();
+}
+
 export function Dashboard() {
   const links = useQuery(api.links.list);
+  const analytics = useQuery(api.links.analyticsOverview, { topLimit: 5, recentLimit: 15 });
   const createLink = useMutation(api.links.create);
   const removeLink = useMutation(api.links.remove);
   const { signOut } = useAuthActions();
@@ -51,7 +57,6 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
       <header className="border-b border-ctp-surface0 px-6 py-4 flex items-center justify-between">
         <h1 className="text-xl font-bold">
           <span className="text-ctp-mauve">snupai</span>
@@ -66,7 +71,6 @@ export function Dashboard() {
       </header>
 
       <div className="max-w-4xl mx-auto p-6 space-y-8">
-        {/* Create Link */}
         <form onSubmit={handleCreate} className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-6 space-y-4">
           <h2 className="text-lg font-semibold text-ctp-text">Create Short Link</h2>
           <div className="flex flex-col sm:flex-row gap-3">
@@ -102,7 +106,53 @@ export function Dashboard() {
           {error && <p className="text-red-400 text-sm">{error}</p>}
         </form>
 
-        {/* Links List */}
+        <section className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-6 space-y-6">
+          <h2 className="text-lg font-semibold text-ctp-text">Analytics</h2>
+          {!analytics ? (
+            <div className="text-ctp-subtext0">Loading analytics…</div>
+          ) : (
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div>
+                <h3 className="text-sm font-medium text-ctp-subtext1 mb-3">Top links by clicks</h3>
+                {analytics.topLinks.length === 0 ? (
+                  <p className="text-ctp-subtext0 text-sm">No click data yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {analytics.topLinks.map((link) => (
+                      <div
+                        key={link._id}
+                        className="bg-ctp-base border border-ctp-surface0 rounded-lg p-3 flex items-center justify-between gap-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-ctp-mauve truncate">snupai.link/{link.slug}</p>
+                          <p className="text-ctp-overlay1 text-xs truncate">{link.url}</p>
+                        </div>
+                        <p className="text-sm text-ctp-text tabular-nums">{link.clickCount}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-ctp-subtext1 mb-3">Recent clicks</h3>
+                {analytics.recentClicks.length === 0 ? (
+                  <p className="text-ctp-subtext0 text-sm">No recent clicks yet.</p>
+                ) : (
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                    {analytics.recentClicks.map((click) => (
+                      <div key={click._id} className="bg-ctp-base border border-ctp-surface0 rounded-lg p-3">
+                        <p className="text-ctp-text text-sm">snupai.link/{click.slug}</p>
+                        <p className="text-ctp-overlay1 text-xs">{formatDateTime(click.createdAt)}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
+
         <div className="space-y-3">
           <h2 className="text-lg font-semibold text-ctp-text">Your Links</h2>
           {!links ? (
@@ -133,6 +183,9 @@ export function Dashboard() {
                         )}
                       </div>
                       <p className="text-ctp-subtext0 text-sm truncate">{link.url}</p>
+                      <p className="text-ctp-overlay0 text-xs mt-1">
+                        Last clicked: {formatDateTime(link.lastClickedAt)}
+                      </p>
                     </div>
 
                     <div className="flex items-start gap-4 flex-shrink-0">

@@ -202,6 +202,87 @@ export const getClicks = query({
   },
 });
 
+export const analyticsOverview = query({
+  args: {
+    topLimit: v.optional(v.number()),
+    recentLimit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      return {
+        topLinks: [],
+        recentClicks: [],
+      };
+    }
+
+    const topLimit = Math.min(Math.max(args.topLimit ?? 5, 1), 20);
+    const recentLimit = Math.min(Math.max(args.recentLimit ?? 20, 1), 100);
+
+    const links = await ctx.db
+      .query("links")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const topLinks = [...links]
+      .sort((a, b) => (b.clickCount ?? b.clicks ?? 0) - (a.clickCount ?? a.clicks ?? 0))
+      .slice(0, topLimit)
+      .map((link) => ({
+        _id: link._id,
+        slug: link.slug,
+        url: link.url,
+        clickCount: link.clickCount ?? link.clicks ?? 0,
+        lastClickedAt: link.lastClickedAt,
+      }));
+
+    const recentFromEvents = await Promise.all(
+      links.map(async (link) => {
+        const events = await ctx.db
+          .query("clickEvents")
+          .withIndex("by_link", (q) => q.eq("linkId", link._id))
+          .order("desc")
+          .take(recentLimit);
+
+        if (events.length > 0) {
+          return events.map((event) => ({
+            _id: event._id,
+            linkId: link._id,
+            slug: link.slug,
+            createdAt: event.createdAt,
+            referrer: event.referrer,
+            ua: event.ua,
+          }));
+        }
+
+        const legacy = await ctx.db
+          .query("clicks")
+          .withIndex("by_link", (q) => q.eq("linkId", link._id))
+          .order("desc")
+          .take(recentLimit);
+
+        return legacy.map((event) => ({
+          _id: event._id,
+          linkId: link._id,
+          slug: link.slug,
+          createdAt: event.timestamp,
+          referrer: event.referrer,
+          ua: event.userAgent,
+        }));
+      })
+    );
+
+    const recentClicks = recentFromEvents
+      .flat()
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, recentLimit);
+
+    return {
+      topLinks,
+      recentClicks,
+    };
+  },
+});
+
 export const backfillLinkStats = mutation({
   args: {
     limit: v.optional(v.number()),
