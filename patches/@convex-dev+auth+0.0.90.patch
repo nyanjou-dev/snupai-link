@@ -1,0 +1,20 @@
+diff --git a/node_modules/@convex-dev/auth/dist/server/implementation/index.js b/node_modules/@convex-dev/auth/dist/server/implementation/index.js
+index 107e1b0..8f021bb 100644
+--- a/node_modules/@convex-dev/auth/dist/server/implementation/index.js
++++ b/node_modules/@convex-dev/auth/dist/server/implementation/index.js
+@@ -115,10 +115,12 @@ export function convexAuth(config_) {
+                 path: "/.well-known/openid-configuration",
+                 method: "GET",
+                 handler: httpActionGeneric(async () => {
++                    const siteUrl = requireEnv("CONVEX_SITE_URL");
+                     return new Response(JSON.stringify({
+-                        issuer: requireEnv("CONVEX_SITE_URL"),
+-                        jwks_uri: requireEnv("CONVEX_SITE_URL") + "/.well-known/jwks.json",
+-                        authorization_endpoint: requireEnv("CONVEX_SITE_URL") + "/oauth/authorize",
++                        issuer: siteUrl,
++                        jwks_uri: siteUrl + "/.well-known/jwks.json",
++                        authorization_endpoint: siteUrl + "/oauth/authorize",
++                        token_endpoint: siteUrl + "/api/auth/callback/convex",
+                     }), {
+                         status: 200,
+                         headers: {
