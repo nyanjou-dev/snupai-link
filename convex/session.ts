@@ -27,13 +27,16 @@ export const authDiagnostics = query({
   args: {},
   handler: async () => {
     const convexSite = safeOrigin(process.env.CONVEX_SITE_URL);
-    const configuredAuthDomain = safeOrigin(process.env.CONVEX_SITE_URL);
+    const customAuthSite = safeOrigin(process.env.CUSTOM_AUTH_SITE_URL);
+    const configuredAuthDomain = customAuthSite ?? convexSite;
 
     return {
       convexSite,
       configuredAuthDomain,
+      customAuthSite,
       authDomainMatchesConvexSite:
         Boolean(convexSite) && Boolean(configuredAuthDomain) && convexSite === configuredAuthDomain,
+      authDomainLooksLikeConvexCloud: configuredAuthDomain?.includes(".convex.cloud") ?? false,
       hasSiteUrlOverride: Boolean(process.env.SITE_URL),
       deploymentHint: process.env.CONVEX_CLOUD_URL ?? null,
     };
