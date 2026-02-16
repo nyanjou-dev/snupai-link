@@ -25,7 +25,8 @@ export function Dashboard() {
     setError("");
     setCreating(true);
     try {
-      await createLink({ slug, url });
+      const trimmedSlug = slug.trim();
+      await createLink({ slug: trimmedSlug || undefined, url });
       setSlug("");
       setUrl("");
     } catch (err: any) {
@@ -72,12 +73,12 @@ export function Dashboard() {
               <span className="text-ctp-subtext0 pl-3 text-sm">snupai.link/</span>
               <input
                 type="text"
-                placeholder="my-slug"
+                placeholder="auto"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
                 className="bg-transparent px-2 py-3 text-ctp-text placeholder-ctp-overlay0 focus:outline-none w-32"
-                required
                 pattern="[a-zA-Z0-9_-]+"
+                title="Leave empty for auto-generated slug"
               />
             </div>
             <input
@@ -96,6 +97,7 @@ export function Dashboard() {
               {creating ? "..." : "Shorten"}
             </button>
           </div>
+          <p className="text-ctp-overlay0 text-xs">Leave slug empty to auto-generate one.</p>
           {error && <p className="text-red-400 text-sm">{error}</p>}
         </form>
 

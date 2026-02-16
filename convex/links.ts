@@ -2,29 +2,62 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
+const SLUG_RE = /^[a-zA-Z0-9_-]+$/;
+const AUTO_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
+
+function randomSlug(length = 6) {
+  let out = "";
+  for (let i = 0; i < length; i++) {
+    out += AUTO_ALPHABET[Math.floor(Math.random() * AUTO_ALPHABET.length)];
+  }
+  return out;
+}
+
 export const create = mutation({
   args: {
-    slug: v.string(),
+    slug: v.optional(v.string()),
     url: v.string(),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    // Check slug uniqueness
-    const existing = await ctx.db
-      .query("links")
-      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
-      .first();
-    if (existing) throw new Error("Slug already taken");
+    const customSlug = args.slug?.trim();
+    let finalSlug: string;
 
-    // Validate slug
-    if (!/^[a-zA-Z0-9_-]+$/.test(args.slug)) {
-      throw new Error("Slug can only contain letters, numbers, hyphens, and underscores");
+    if (customSlug) {
+      if (!SLUG_RE.test(customSlug)) {
+        throw new Error("Slug can only contain letters, numbers, hyphens, and underscores");
+      }
+
+      const existing = await ctx.db
+        .query("links")
+        .withIndex("by_slug", (q) => q.eq("slug", customSlug))
+        .first();
+      if (existing) throw new Error("Slug already taken");
+
+      finalSlug = customSlug;
+    } else {
+      // Auto-generate a unique slug.
+      let generated: string | null = null;
+      for (let i = 0; i < 20; i++) {
+        const candidate = randomSlug(6);
+        const existing = await ctx.db
+          .query("links")
+          .withIndex("by_slug", (q) => q.eq("slug", candidate))
+          .first();
+        if (!existing) {
+          generated = candidate;
+          break;
+        }
+      }
+
+      if (!generated) throw new Error("Could not generate unique slug. Please try again.");
+      finalSlug = generated;
     }
 
     return await ctx.db.insert("links", {
-      slug: args.slug,
+      slug: finalSlug,
       url: args.url,
       userId,
       clicks: 0,
@@ -52,7 +85,7 @@ export const remove = mutation({
     if (!userId) throw new Error("Not authenticated");
     const link = await ctx.db.get(args.id);
     if (!link || link.userId !== userId) throw new Error("Not found");
-    
+
     // Delete associated clicks
     const clicks = await ctx.db
       .query("clicks")
@@ -61,7 +94,7 @@ export const remove = mutation({
     for (const click of clicks) {
       await ctx.db.delete(click._id);
     }
-    
+
     await ctx.db.delete(args.id);
   },
 });
