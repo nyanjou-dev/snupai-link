@@ -14,11 +14,7 @@ export function Landing() {
 
         <a
           href="/login"
-          className="inline-flex items-center justify-center px-10 py-4 rounded-xl font-semibold text-lg shadow-sm"
-          style={{
-            background: "var(--ctp-mauve)",
-            color: "#11111b",
-          }}
+          className="inline-flex items-center justify-center px-10 py-4 rounded-xl font-semibold text-lg shadow-sm bg-ctp-mauve text-ctp-crust hover:bg-ctp-mauve/90 transition-colors"
         >
           Get Started →
         </a>

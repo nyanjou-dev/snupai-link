@@ -4,6 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { LinkQRCode } from "./LinkQRCode";
+import { formatDateTime } from "@/lib/datetime";
 
 export function ClickDetails({
   linkId,
@@ -29,7 +30,9 @@ export function ClickDetails({
         {!topReferrers ? (
           <div className="text-ctp-subtext0 text-sm">Loading…</div>
         ) : topReferrers.length === 0 ? (
-          <div className="text-ctp-subtext0 text-sm">No referrer data yet.</div>
+          <div className="rounded-lg border border-ctp-surface0 bg-ctp-base p-3 text-ctp-subtext0 text-sm">
+            No referrer data yet. Once people click this link, common sources will appear here.
+          </div>
         ) : (
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {topReferrers.map((item) => (
@@ -50,7 +53,9 @@ export function ClickDetails({
         {!clicks ? (
           <div className="text-ctp-subtext0 text-sm">Loading…</div>
         ) : clicks.length === 0 ? (
-          <div className="text-ctp-subtext0 text-sm">No clicks yet.</div>
+          <div className="rounded-lg border border-ctp-surface0 bg-ctp-base p-3 text-ctp-subtext0 text-sm">
+            No clicks recorded yet for this link.
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -65,7 +70,7 @@ export function ClickDetails({
                 {clicks.map((c) => (
                   <tr key={c._id} className="border-t border-ctp-crust">
                     <td className="py-2 pr-4 text-ctp-subtext1 whitespace-nowrap">
-                      {new Date(c.createdAt).toLocaleString()}
+                      {formatDateTime(c.createdAt)}
                     </td>
                     <td className="py-2 pr-4 text-ctp-subtext1 max-w-[320px] truncate">
                       {c.referrer || "direct/unknown"}

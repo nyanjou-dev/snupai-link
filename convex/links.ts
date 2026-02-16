@@ -7,6 +7,10 @@ const AUTO_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
 const AUTO_MIN_LEN = 3;
 const AUTO_MAX_LEN = 8;
 const DIRECT_UNKNOWN_REFERRER = "direct/unknown";
+const MIN_MAX_CLICKS = 1;
+const MAX_MAX_CLICKS = 1_000_000;
+const MIN_EXPIRY_MS_FROM_NOW = 60_000; // 1 minute
+const MAX_EXPIRY_MS_FROM_NOW = 5 * 365 * 24 * 60 * 60 * 1000; // 5 years
 
 function randomSlug(length = 6) {
   let out = "";
@@ -41,15 +45,55 @@ export const create = mutation({
   args: {
     slug: v.optional(v.string()),
     url: v.string(),
+    expiresAt: v.optional(v.number()),
+    maxClicks: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    let normalizedUrl: string;
+    try {
+      const parsedUrl = new URL(args.url.trim());
+      if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+        throw new Error("URL must start with http:// or https://");
+      }
+      normalizedUrl = parsedUrl.toString();
+    } catch {
+      throw new Error("Please enter a valid destination URL");
+    }
+
+    const now = Date.now();
+
+    if (typeof args.maxClicks === "number") {
+      if (!Number.isInteger(args.maxClicks)) {
+        throw new Error("Click limit must be a whole number");
+      }
+      if (args.maxClicks < MIN_MAX_CLICKS || args.maxClicks > MAX_MAX_CLICKS) {
+        throw new Error(`Click limit must be between ${MIN_MAX_CLICKS} and ${MAX_MAX_CLICKS.toLocaleString()}`);
+      }
+    }
+
+    if (typeof args.expiresAt === "number") {
+      if (!Number.isFinite(args.expiresAt)) {
+        throw new Error("Invalid expiry date");
+      }
+      if (args.expiresAt < now + MIN_EXPIRY_MS_FROM_NOW) {
+        throw new Error("Expiry must be at least 1 minute in the future");
+      }
+      if (args.expiresAt > now + MAX_EXPIRY_MS_FROM_NOW) {
+        throw new Error("Expiry date is too far in the future");
+      }
+    }
+
     const customSlug = args.slug?.trim();
     let finalSlug: string;
 
     if (customSlug) {
+      if (customSlug.length < 2 || customSlug.length > 64) {
+        throw new Error("Slug must be between 2 and 64 characters");
+      }
+
       if (!SLUG_RE.test(customSlug)) {
         throw new Error("Slug can only contain letters, numbers, hyphens, and underscores");
       }
@@ -86,10 +130,12 @@ export const create = mutation({
 
     return await ctx.db.insert("links", {
       slug: finalSlug,
-      url: args.url,
+      url: normalizedUrl,
       userId,
       clickCount: 0,
-      createdAt: Date.now(),
+      createdAt: now,
+      expiresAt: args.expiresAt,
+      maxClicks: args.maxClicks,
     });
   },
 });

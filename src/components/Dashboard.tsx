@@ -3,15 +3,15 @@
 import { useQuery, useMutation } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "../../convex/_generated/api";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Id } from "../../convex/_generated/dataModel";
 import { ClickDetails } from "./ClickDetails";
 import { LinkQRCode } from "./LinkQRCode";
+import { formatDateTime, formatExpiry, fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/datetime";
 
-function formatDateTime(timestamp?: number) {
-  if (!timestamp) return "Never";
-  return new Date(timestamp).toLocaleString();
-}
+const MIN_MAX_CLICKS = 1;
+const MAX_MAX_CLICKS = 1_000_000;
+const MIN_EXPIRY_MS_FROM_NOW = 60_000;
 
 export function Dashboard() {
   const links = useQuery(api.links.list);
@@ -22,20 +22,59 @@ export function Dashboard() {
 
   const [slug, setSlug] = useState("");
   const [url, setUrl] = useState("");
+  const [expiresAtInput, setExpiresAtInput] = useState("");
+  const [maxClicksInput, setMaxClicksInput] = useState("");
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
   const [selectedLink, setSelectedLink] = useState<Id<"links"> | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
+  const formValidationError = useMemo(() => {
+    if (maxClicksInput.trim()) {
+      const parsed = Number(maxClicksInput);
+      if (!Number.isInteger(parsed)) return "Click limit must be a whole number.";
+      if (parsed < MIN_MAX_CLICKS || parsed > MAX_MAX_CLICKS) {
+        return `Click limit must be between ${MIN_MAX_CLICKS} and ${MAX_MAX_CLICKS.toLocaleString()}.`;
+      }
+    }
+
+    if (expiresAtInput) {
+      const expiry = fromDatetimeLocalValue(expiresAtInput);
+      if (!expiry) return "Please enter a valid expiry date and time.";
+      if (expiry < Date.now() + MIN_EXPIRY_MS_FROM_NOW) {
+        return "Expiry must be at least 1 minute in the future.";
+      }
+    }
+
+    return "";
+  }, [expiresAtInput, maxClicksInput]);
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (formValidationError) {
+      setError(formValidationError);
+      return;
+    }
+
     setCreating(true);
     try {
       const trimmedSlug = slug.trim();
-      await createLink({ slug: trimmedSlug || undefined, url });
+      const trimmedMaxClicks = maxClicksInput.trim();
+      const expiresAt = expiresAtInput ? fromDatetimeLocalValue(expiresAtInput) : null;
+
+      await createLink({
+        slug: trimmedSlug || undefined,
+        url,
+        maxClicks: trimmedMaxClicks ? Number(trimmedMaxClicks) : undefined,
+        expiresAt: expiresAt ?? undefined,
+      });
+
       setSlug("");
       setUrl("");
+      setMaxClicksInput("");
+      setExpiresAtInput("");
     } catch (err: any) {
       setError(err.message || "Failed to create link");
     } finally {
@@ -73,6 +112,7 @@ export function Dashboard() {
       <div className="max-w-4xl mx-auto p-6 space-y-8">
         <form onSubmit={handleCreate} className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-6 space-y-4">
           <h2 className="text-lg font-semibold text-ctp-text">Create Short Link</h2>
+
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex items-center bg-ctp-base border border-ctp-surface0 rounded-lg overflow-hidden flex-shrink-0">
               <span className="text-ctp-subtext0 pl-3 text-sm">snupai.link/</span>
@@ -96,14 +136,46 @@ export function Dashboard() {
             />
             <button
               type="submit"
-              disabled={creating}
-              className="bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 text-white px-6 py-3 rounded-lg font-medium transition-colors whitespace-nowrap"
+              disabled={creating || !!formValidationError}
+              className="bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 disabled:cursor-not-allowed text-ctp-crust px-6 py-3 rounded-lg font-medium transition-colors whitespace-nowrap"
             >
-              {creating ? "..." : "Shorten"}
+              {creating ? "Creating…" : "Shorten"}
             </button>
           </div>
-          <p className="text-ctp-overlay0 text-xs">Leave slug empty to auto-generate one (usually 3-8 chars).</p>
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <label htmlFor="expiry" className="text-ctp-subtext1 text-sm">Expiry (optional)</label>
+              <input
+                id="expiry"
+                type="datetime-local"
+                value={expiresAtInput}
+                min={toDatetimeLocalValue(Date.now() + MIN_EXPIRY_MS_FROM_NOW)}
+                onChange={(e) => setExpiresAtInput(e.target.value)}
+                className="w-full bg-ctp-base border border-ctp-surface0 rounded-lg px-3 py-2 text-ctp-text focus:outline-none focus:border-ctp-mauve transition-colors"
+              />
+              <p className="text-[11px] text-ctp-overlay0">Uses your local timezone ({Intl.DateTimeFormat().resolvedOptions().timeZone}).</p>
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="maxClicks" className="text-ctp-subtext1 text-sm">Click limit (optional)</label>
+              <input
+                id="maxClicks"
+                type="number"
+                min={MIN_MAX_CLICKS}
+                max={MAX_MAX_CLICKS}
+                step={1}
+                placeholder="e.g. 100"
+                value={maxClicksInput}
+                onChange={(e) => setMaxClicksInput(e.target.value)}
+                className="w-full bg-ctp-base border border-ctp-surface0 rounded-lg px-3 py-2 text-ctp-text placeholder-ctp-overlay0 focus:outline-none focus:border-ctp-mauve transition-colors"
+              />
+              <p className="text-[11px] text-ctp-overlay0">Set between 1 and {MAX_MAX_CLICKS.toLocaleString()}.</p>
+            </div>
+          </div>
+
+          <p className="text-ctp-overlay0 text-xs">Leave slug empty to auto-generate one (usually 3–8 chars).</p>
+          {(error || formValidationError) && <p className="text-red-400 text-sm">{error || formValidationError}</p>}
         </form>
 
         <section className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-6 space-y-6">
@@ -115,7 +187,9 @@ export function Dashboard() {
               <div>
                 <h3 className="text-sm font-medium text-ctp-subtext1 mb-3">Top links by clicks</h3>
                 {analytics.topLinks.length === 0 ? (
-                  <p className="text-ctp-subtext0 text-sm">No click data yet.</p>
+                  <div className="rounded-lg border border-ctp-surface0 bg-ctp-base p-4 text-sm text-ctp-subtext0">
+                    No links have been clicked yet. Share a short link to start seeing stats.
+                  </div>
                 ) : (
                   <div className="space-y-2">
                     {analytics.topLinks.map((link) => (
@@ -137,7 +211,9 @@ export function Dashboard() {
               <div>
                 <h3 className="text-sm font-medium text-ctp-subtext1 mb-3">Recent clicks</h3>
                 {analytics.recentClicks.length === 0 ? (
-                  <p className="text-ctp-subtext0 text-sm">No recent clicks yet.</p>
+                  <div className="rounded-lg border border-ctp-surface0 bg-ctp-base p-4 text-sm text-ctp-subtext0">
+                    Nothing to show yet. New visits will appear here in real time.
+                  </div>
                 ) : (
                   <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                     {analytics.recentClicks.map((click) => (
@@ -159,7 +235,8 @@ export function Dashboard() {
             <div className="text-ctp-subtext0">Loading...</div>
           ) : links.length === 0 ? (
             <div className="text-ctp-subtext0 bg-ctp-mantle border border-ctp-surface0 rounded-xl p-8 text-center">
-              No links yet. Create your first one above! ✨
+              <p className="text-sm">No links yet.</p>
+              <p className="text-xs text-ctp-overlay0 mt-1">Create your first short link above to get started ✨</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -183,9 +260,15 @@ export function Dashboard() {
                         )}
                       </div>
                       <p className="text-ctp-subtext0 text-sm truncate">{link.url}</p>
-                      <p className="text-ctp-overlay0 text-xs mt-1">
-                        Last clicked: {formatDateTime(link.lastClickedAt)}
-                      </p>
+                      <p className="text-ctp-overlay0 text-xs mt-1">Last clicked: {formatDateTime(link.lastClickedAt)}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                        <span className="rounded-full border border-ctp-surface0 bg-ctp-base px-2 py-0.5 text-ctp-subtext1">
+                          Expires: {formatExpiry(link.expiresAt)}
+                        </span>
+                        <span className="rounded-full border border-ctp-surface0 bg-ctp-base px-2 py-0.5 text-ctp-subtext1">
+                          Limit: {typeof link.maxClicks === "number" ? link.maxClicks.toLocaleString() : "Unlimited"}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="flex items-start gap-4 flex-shrink-0">
