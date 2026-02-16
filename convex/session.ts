@@ -27,9 +27,7 @@ export const authDiagnostics = query({
   args: {},
   handler: async () => {
     const convexSite = safeOrigin(process.env.CONVEX_SITE_URL);
-    const configuredAuthDomain = safeOrigin(
-      process.env.CONVEX_SITE_URL ?? process.env.CONVEX_AUTH_SITE_URL ?? process.env.SITE_URL,
-    );
+    const configuredAuthDomain = safeOrigin(process.env.CONVEX_SITE_URL);
 
     return {
       convexSite,
