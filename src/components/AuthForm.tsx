@@ -1,24 +1,68 @@
 "use client";
 
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useMutation } from "convex/react";
+import { useConvexAuth, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 function getErrorMessage(err: unknown) {
   if (err instanceof Error && err.message) return err.message;
   return "Something went wrong";
 }
 
+function readLoginParams() {
+  if (typeof window === "undefined") {
+    return { reason: "", next: "" };
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  return {
+    reason: params.get("reason") ?? "",
+    next: params.get("next") ?? "",
+  };
+}
+
 export function AuthForm({ onBack }: { onBack?: () => void }) {
   const { signIn } = useAuthActions();
+  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const cleanupAuth = useMutation(api.authMaintenance.cleanupInvalidAuthReferences);
+  const router = useRouter();
   const allowSignup = process.env.NEXT_PUBLIC_ALLOW_SIGNUP !== "false";
   const [flow, setFlow] = useState<"signIn" | "signUp">("signIn");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [waitingForSession, setWaitingForSession] = useState(false);
+  const [reason, setReason] = useState("");
+  const [nextPath, setNextPath] = useState("");
+
+  useEffect(() => {
+    const { reason, next } = readLoginParams();
+    setReason(reason);
+    setNextPath(next);
+  }, []);
+
+  useEffect(() => {
+    if (!waitingForSession || authLoading) return;
+    if (!isAuthenticated) return;
+
+    router.replace(nextPath || "/dashboard");
+  }, [authLoading, isAuthenticated, nextPath, router, waitingForSession]);
+
+  useEffect(() => {
+    if (!waitingForSession) return;
+
+    const timeout = window.setTimeout(() => {
+      if (!isAuthenticated) {
+        setWaitingForSession(false);
+        setError("Sign-in took too long. Please try again.");
+      }
+    }, 8000);
+
+    return () => window.clearTimeout(timeout);
+  }, [isAuthenticated, waitingForSession]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,10 +73,10 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
         setError("Sign up is disabled.");
         return;
       }
-      await signIn("password", { email, password, flow });
-      // Send users straight to dashboard after auth.
-      window.location.href = "/dashboard";
-      return;
+      const result = await signIn("password", { email, password, flow });
+      if (result.signingIn) {
+        setWaitingForSession(true);
+      }
     } catch (err: unknown) {
       const message = getErrorMessage(err);
 
@@ -50,6 +94,8 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
       setLoading(false);
     }
   };
+
+  const loginMessage = reason === "session-expired" ? "Your session expired. Please sign in again." : "";
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
@@ -70,6 +116,11 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {loginMessage && (
+            <p className="rounded-lg border border-ctp-surface0 bg-ctp-mantle px-3 py-2 text-sm text-ctp-subtext1">
+              {loginMessage}
+            </p>
+          )}
           <input
             type="email"
             placeholder="Email"
@@ -89,10 +140,10 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
           {error && <p className="text-red-400 text-sm">{error}</p>}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || waitingForSession}
             className="w-full bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 text-white py-3 rounded-lg font-medium transition-colors"
           >
-            {loading ? "..." : flow === "signIn" ? "Sign In" : "Sign Up"}
+            {waitingForSession ? "Finishing sign-in…" : loading ? "..." : flow === "signIn" ? "Sign In" : "Sign Up"}
           </button>
         </form>
 

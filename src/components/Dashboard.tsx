@@ -1,13 +1,14 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useConvexAuth, useQuery, useMutation } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "../../convex/_generated/api";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Id } from "../../convex/_generated/dataModel";
 import { ClickDetails } from "./ClickDetails";
 import { LinkQRCode } from "./LinkQRCode";
 import { formatDateTime, formatExpiry, fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/datetime";
+import { useRouter } from "next/navigation";
 
 const MIN_MAX_CLICKS = 1;
 const MAX_MAX_CLICKS = 1_000_000;
@@ -19,6 +20,8 @@ function getErrorMessage(err: unknown) {
 }
 
 export function Dashboard() {
+  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
+  const router = useRouter();
   const links = useQuery(api.links.list);
   const analytics = useQuery(api.links.analyticsOverview, { topLimit: 5, recentLimit: 15 });
   const createLink = useMutation(api.links.create);
@@ -33,6 +36,13 @@ export function Dashboard() {
   const [creating, setCreating] = useState(false);
   const [selectedLink, setSelectedLink] = useState<Id<"links"> | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+
+  const authReady = !authLoading && isAuthenticated;
+
+  useEffect(() => {
+    if (authLoading || isAuthenticated) return;
+    router.replace("/login?reason=session-expired&next=/dashboard");
+  }, [authLoading, isAuthenticated, router]);
 
   const formValidationError = useMemo(() => {
     if (maxClicksInput.trim()) {
@@ -81,7 +91,15 @@ export function Dashboard() {
       setMaxClicksInput("");
       setExpiresAtInput("");
     } catch (err: unknown) {
-      setError(getErrorMessage(err));
+      const message = getErrorMessage(err);
+      if (message.includes("Not authenticated")) {
+        setError("Your session expired. Redirecting to login…");
+        setTimeout(() => {
+          router.replace("/login?reason=session-expired&next=/dashboard");
+        }, 600);
+      } else {
+        setError(message);
+      }
     } finally {
       setCreating(false);
     }
@@ -95,9 +113,37 @@ export function Dashboard() {
 
   const handleDelete = async (id: Id<"links">) => {
     if (!confirm("Delete this link?")) return;
-    await removeLink({ id });
-    if (selectedLink === id) setSelectedLink(null);
+    try {
+      await removeLink({ id });
+      if (selectedLink === id) setSelectedLink(null);
+    } catch (err: unknown) {
+      const message = getErrorMessage(err);
+      if (message.includes("Not authenticated")) {
+        setError("Your session expired. Redirecting to login…");
+        setTimeout(() => {
+          router.replace("/login?reason=session-expired&next=/dashboard");
+        }, 600);
+        return;
+      }
+      setError(message);
+    }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-ctp-mauve" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-ctp-subtext1">
+        Redirecting to login…
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
@@ -141,7 +187,7 @@ export function Dashboard() {
             />
             <button
               type="submit"
-              disabled={creating || !!formValidationError}
+              disabled={creating || !!formValidationError || !authReady}
               className="bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 disabled:cursor-not-allowed text-ctp-crust px-6 py-3 rounded-lg font-medium transition-colors whitespace-nowrap"
             >
               {creating ? "Creating…" : "Shorten"}
