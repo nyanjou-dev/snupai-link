@@ -79,5 +79,17 @@ Open http://localhost:3000
 
 ## Deploy (Vercel)
 
-Set the same env vars in Vercel: `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, and Convex Auth keys (`JWT_PRIVATE_KEY`, `JWKS`). On Convex, ensure `CONVEX_SITE_URL` and `SITE_URL` are set ([Convex Auth production](https://labs.convex.dev/auth/production)).
+Set in **Vercel** (Project → Settings → Environment Variables):
+
+- `CONVEX_DEPLOYMENT` – your Convex deployment name (e.g. `basic-seal-838`)
+- `NEXT_PUBLIC_CONVEX_URL` – **must be the Convex deployment URL**, e.g. `https://basic-seal-838.eu-west-1.convex.cloud` (use the `.convex.cloud` URL from your [Convex dashboard](https://dashboard.convex.dev); do not use the `.convex.site` URL or `null`)
+- Convex Auth keys: `JWT_PRIVATE_KEY`, `JWKS` (if you use auth)
+
+On **Convex** (Dashboard → Settings → Environment Variables), ensure `CONVEX_SITE_URL` and `SITE_URL` are set ([Convex Auth production](https://labs.convex.dev/auth/production)).
+
+**If sign-in returns 400:** The login form shows the server error message. Common causes:
+
+- **Convex Dashboard** (your deployment → Settings → Environment Variables): set `JWT_PRIVATE_KEY`, `JWKS`, `CONVEX_SITE_URL` (e.g. `https://basic-seal-838.eu-west-1.convex.site`), and `SITE_URL` (your app URL, e.g. `https://snupai-link.vercel.app`). If any are missing, Convex auth throws and the proxy returns 400 with that message.
+- **Vercel**: ensure `NEXT_PUBLIC_CONVEX_URL` is your `.convex.cloud` URL (you already have this).
+- Check **Vercel → Logs** (or Runtime Logs) after a failed login to see the exact error from the auth proxy.
 

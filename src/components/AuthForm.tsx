@@ -81,7 +81,9 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
       await signIn("password", { email, password, flow });
       // Redirect is handled by useConvexAuth effect once auth state updates.
     } catch (err: unknown) {
-      setError(getErrorMessage(err));
+      const msg = getErrorMessage(err);
+      setError(msg);
+      console.error("[auth] sign-in failed:", err);
     } finally {
       setLoading(false);
     }
