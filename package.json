@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "eslint",
     "convex:dev": "convex dev",
-    "convex:deploy": "convex deploy"
+    "convex:deploy": "convex deploy",
+    "convex:auth-debug": "convex env set AUTH_LOG_LEVEL DEBUG"
   },
   "dependencies": {
     "@auth/core": "^0.37.4",
