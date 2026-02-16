@@ -20,6 +20,10 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
     setLoading(true);
     try {
       await signIn("password", { email, password, flow });
+      // In some browsers/auth states the reactive session update lags.
+      // Force navigation so the root auth gate can re-check session immediately.
+      window.location.href = "/";
+      return;
     } catch (err: any) {
       const message = String(err?.message || "Something went wrong");
 
