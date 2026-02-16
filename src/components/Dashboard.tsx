@@ -6,6 +6,7 @@ import { api } from "../../convex/_generated/api";
 import { useState } from "react";
 import { Id } from "../../convex/_generated/dataModel";
 import { ClickDetails } from "./ClickDetails";
+import { LinkQRCode } from "./LinkQRCode";
 
 export function Dashboard() {
   const links = useQuery(api.links.list);
@@ -117,7 +118,7 @@ export function Dashboard() {
                   key={link._id}
                   className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-4 hover:border-ctp-surface1 transition-colors"
                 >
-                  <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <button
@@ -133,23 +134,33 @@ export function Dashboard() {
                       </div>
                       <p className="text-ctp-subtext0 text-sm truncate">{link.url}</p>
                     </div>
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      <button
-                        onClick={() => setSelectedLink(selectedLink === link._id ? null : link._id)}
-                        className="text-ctp-subtext1 hover:text-ctp-text text-sm tabular-nums transition-colors"
-                      >
-                        {link.clickCount} click{link.clickCount !== 1 ? "s" : ""}
-                      </button>
-                      <button
-                        onClick={() => handleDelete(link._id)}
-                        className="text-ctp-overlay0 hover:text-red-400 transition-colors"
-                        title="Delete"
-                      >
-                        ×
-                      </button>
+
+                    <div className="flex items-start gap-4 flex-shrink-0">
+                      <div className="text-center">
+                        <LinkQRCode value={link.url} slug={link.slug} size={72} />
+                        <p className="text-[10px] text-ctp-overlay0 mt-1">Target QR</p>
+                      </div>
+
+                      <div className="flex items-center gap-3 pt-1">
+                        <button
+                          onClick={() => setSelectedLink(selectedLink === link._id ? null : link._id)}
+                          className="text-ctp-subtext1 hover:text-ctp-text text-sm tabular-nums transition-colors"
+                        >
+                          {link.clickCount} click{link.clickCount !== 1 ? "s" : ""}
+                        </button>
+                        <button
+                          onClick={() => handleDelete(link._id)}
+                          className="text-ctp-overlay0 hover:text-red-400 transition-colors"
+                          title="Delete"
+                        >
+                          ×
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  {selectedLink === link._id && <ClickDetails linkId={link._id} />}
+                  {selectedLink === link._id && (
+                    <ClickDetails linkId={link._id} slug={link.slug} targetUrl={link.url} />
+                  )}
                 </div>
               ))}
             </div>
