@@ -41,19 +41,34 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
   const [loading, setLoading] = useState(false);
   const [waitingForSession, setWaitingForSession] = useState(false);
   const [showSlowSigninHint, setShowSlowSigninHint] = useState(false);
+  const [showContinueFallback, setShowContinueFallback] = useState(false);
+  const [phaseMessage, setPhaseMessage] = useState("");
   const [reason, setReason] = useState("");
   const [nextPath, setNextPath] = useState("");
   const waitingStartedAtRef = useRef<number | null>(null);
   const redirectInProgressRef = useRef(false);
+
+  const targetPath = nextPath || "/dashboard";
+
+  const verifySession = useCallback(async () => {
+    try {
+      const me = await convex.query(api.session.me, {});
+      return Boolean(me?.userId);
+    } catch {
+      return false;
+    }
+  }, [convex]);
 
   const finishSignIn = useCallback(() => {
     if (redirectInProgressRef.current) return;
     redirectInProgressRef.current = true;
     setWaitingForSession(false);
     setShowSlowSigninHint(false);
+    setShowContinueFallback(false);
+    setPhaseMessage("Signed in. Redirecting…");
     setError("");
-    router.replace(nextPath || "/dashboard");
-  }, [nextPath, router]);
+    router.replace(targetPath);
+  }, [router, targetPath]);
 
   useEffect(() => {
     const { reason, next } = readLoginParams();
@@ -62,42 +77,42 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
   }, []);
 
   useEffect(() => {
-    if (!waitingForSession || authLoading) return;
-    if (!isAuthenticated) return;
-
+    if (authLoading || !isAuthenticated) return;
     finishSignIn();
-  }, [authLoading, finishSignIn, isAuthenticated, waitingForSession]);
+  }, [authLoading, finishSignIn, isAuthenticated]);
 
   useEffect(() => {
     if (!waitingForSession) {
       waitingStartedAtRef.current = null;
       setShowSlowSigninHint(false);
-      redirectInProgressRef.current = false;
+      if (!redirectInProgressRef.current) {
+        setPhaseMessage("");
+      }
       return;
     }
 
     waitingStartedAtRef.current = Date.now();
+    setPhaseMessage("Finishing sign-in…");
 
     const hintTimer = window.setTimeout(() => {
       setShowSlowSigninHint(true);
+      setPhaseMessage("Still waiting for your session to sync…");
     }, SLOW_SIGNIN_HINT_MS);
 
     const pollTimer = window.setInterval(async () => {
-      try {
-        const me = await convex.query(api.session.me, {});
-        if (me?.userId) {
-          finishSignIn();
-          return;
-        }
-      } catch {
-        // Ignore transient polling errors while waiting for auth/session propagation.
+      const verified = await verifySession();
+      if (verified) {
+        finishSignIn();
+        return;
       }
 
       const waitingStartedAt = waitingStartedAtRef.current;
       if (waitingStartedAt && Date.now() - waitingStartedAt >= SESSION_RECOVERY_TIMEOUT_MS) {
         setWaitingForSession(false);
         setShowSlowSigninHint(false);
-        setError("We couldn't confirm your session yet. Please tap Sign In again.");
+        setShowContinueFallback(true);
+        setPhaseMessage("Session sync is taking longer than expected.");
+        setError("You can retry sign-in, or continue to dashboard and let the app re-check your session.");
       }
     }, SESSION_RECOVERY_POLL_MS);
 
@@ -105,28 +120,36 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
       window.clearTimeout(hintTimer);
       window.clearInterval(pollTimer);
     };
-  }, [convex, finishSignIn, waitingForSession]);
+  }, [finishSignIn, verifySession, waitingForSession]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const attemptSignIn = useCallback(async () => {
     waitingStartedAtRef.current = null;
     setError("");
     setWaitingForSession(false);
     setShowSlowSigninHint(false);
+    setShowContinueFallback(false);
     setLoading(true);
+    setPhaseMessage(flow === "signIn" ? "Signing you in…" : "Creating account…");
+
     try {
       if (!allowSignup && flow === "signUp") {
         setError("Sign up is disabled.");
+        setPhaseMessage("");
         return;
       }
+
       const result = await signIn("password", { email, password, flow });
       if (result.signingIn) {
         setWaitingForSession(true);
+        return;
+      }
+
+      setPhaseMessage("Verifying your session…");
+      const verified = await verifySession();
+      if (verified) {
+        finishSignIn();
       } else {
-        const me = await convex.query(api.session.me, {});
-        if (me?.userId) {
-          finishSignIn();
-        }
+        setWaitingForSession(true);
       }
     } catch (err: unknown) {
       const message = getErrorMessage(err);
@@ -141,9 +164,15 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
       } else {
         setError(message);
       }
+      setPhaseMessage("");
     } finally {
       setLoading(false);
     }
+  }, [allowSignup, cleanupAuth, email, finishSignIn, flow, password, signIn, verifySession]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await attemptSignIn();
   };
 
   const loginMessage = reason === "session-expired" ? "Your session expired. Please sign in again." : "";
@@ -188,12 +217,17 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
             className="w-full bg-ctp-mantle border border-ctp-surface0 rounded-lg px-4 py-3 text-ctp-text placeholder-ctp-overlay0 focus:outline-none focus:border-ctp-mauve transition-colors"
             required
           />
+          {phaseMessage && !error && (
+            <p className="rounded-lg border border-ctp-surface0 bg-ctp-mantle px-3 py-2 text-sm text-ctp-subtext1">
+              {phaseMessage}
+            </p>
+          )}
           {error && <p className="text-red-400 text-sm">{error}</p>}
           {waitingForSession && (
             <p className="rounded-lg border border-ctp-surface0 bg-ctp-mantle px-3 py-2 text-sm text-ctp-subtext1">
               {showSlowSigninHint
-                ? "Still signing you in… mobile networks can be slow. You can keep waiting or retry."
-                : "Finishing sign-in…"}
+                ? "Still signing you in… network/session sync can be slow. You can retry anytime."
+                : "Waiting for session…"}
             </p>
           )}
           <button
@@ -203,17 +237,27 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
           >
             {waitingForSession ? "Waiting for session…" : loading ? "..." : flow === "signIn" ? "Sign In" : "Sign Up"}
           </button>
-          {waitingForSession && (
+          {(waitingForSession || showContinueFallback) && (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={attemptSignIn}
+              className="w-full border border-ctp-surface0 hover:border-ctp-surface1 disabled:opacity-50 text-ctp-subtext1 py-3 rounded-lg font-medium transition-colors"
+            >
+              Retry sign-in
+            </button>
+          )}
+          {showContinueFallback && (
             <button
               type="button"
               onClick={() => {
-                setWaitingForSession(false);
-                setShowSlowSigninHint(false);
                 setError("");
+                setPhaseMessage("Continuing to dashboard…");
+                router.replace(targetPath);
               }}
               className="w-full border border-ctp-surface0 hover:border-ctp-surface1 text-ctp-subtext1 py-3 rounded-lg font-medium transition-colors"
             >
-              Retry sign-in
+              Continue to dashboard
             </button>
           )}
         </form>
@@ -222,6 +266,7 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
           <p className="text-center text-ctp-subtext0 text-sm">
             {flow === "signIn" ? "No account? " : "Already have one? "}
             <button
+              type="button"
               onClick={() => setFlow(flow === "signIn" ? "signUp" : "signIn")}
               className="text-ctp-mauve hover:text-ctp-lavender"
             >
