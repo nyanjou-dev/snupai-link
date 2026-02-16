@@ -15,12 +15,34 @@ export function ClickDetails({
   targetUrl: string;
 }) {
   const clicks = useQuery(api.links.getClicks, { linkId });
+  const topReferrers = useQuery(api.links.topReferrersForLink, { linkId, limit: 5 });
 
   return (
     <div className="mt-4 border-t border-ctp-surface0 pt-4 space-y-4">
       <div>
         <h3 className="text-sm font-medium text-ctp-subtext1 mb-2">QR code (destination URL)</h3>
         <LinkQRCode value={targetUrl} slug={slug} size={160} showActions />
+      </div>
+
+      <div>
+        <h3 className="text-sm font-medium text-ctp-subtext1 mb-3">Top referrers</h3>
+        {!topReferrers ? (
+          <div className="text-ctp-subtext0 text-sm">Loading…</div>
+        ) : topReferrers.length === 0 ? (
+          <div className="text-ctp-subtext0 text-sm">No referrer data yet.</div>
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {topReferrers.map((item) => (
+              <div
+                key={item.domain}
+                className="rounded-lg border border-ctp-surface0 bg-ctp-base px-3 py-2 flex items-center justify-between gap-3"
+              >
+                <span className="text-ctp-subtext1 text-sm truncate">{item.domain}</span>
+                <span className="text-ctp-text text-sm tabular-nums">{item.count}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div>
@@ -46,7 +68,7 @@ export function ClickDetails({
                       {new Date(c.createdAt).toLocaleString()}
                     </td>
                     <td className="py-2 pr-4 text-ctp-subtext1 max-w-[320px] truncate">
-                      {c.referrer || "—"}
+                      {c.referrer || "direct/unknown"}
                     </td>
                     <td className="py-2 pr-4 text-ctp-subtext0 max-w-[420px] truncate">
                       {c.ua || "—"}

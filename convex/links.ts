@@ -6,6 +6,7 @@ const SLUG_RE = /^[a-zA-Z0-9_-]+$/;
 const AUTO_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
 const AUTO_MIN_LEN = 3;
 const AUTO_MAX_LEN = 8;
+const DIRECT_UNKNOWN_REFERRER = "direct/unknown";
 
 function randomSlug(length = 6) {
   let out = "";
@@ -13,6 +14,27 @@ function randomSlug(length = 6) {
     out += AUTO_ALPHABET[Math.floor(Math.random() * AUTO_ALPHABET.length)];
   }
   return out;
+}
+
+function normalizeReferrerDomain(referrer?: string) {
+  if (!referrer) return DIRECT_UNKNOWN_REFERRER;
+
+  const value = referrer.trim();
+  if (!value) return DIRECT_UNKNOWN_REFERRER;
+
+  const candidates = [value, `https://${value}`];
+
+  for (const candidate of candidates) {
+    try {
+      const parsed = new URL(candidate);
+      const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+      if (host) return host;
+    } catch {
+      // Continue trying fallbacks.
+    }
+  }
+
+  return DIRECT_UNKNOWN_REFERRER;
 }
 
 export const create = mutation({
@@ -148,11 +170,13 @@ export const trackClick = mutation({
       return { ok: false as const, reason: "max_clicks" as const };
     }
 
+    const referrerDomain = normalizeReferrerDomain(args.referrer);
+
     try {
       await ctx.db.insert("clickEvents", {
         linkId: link._id,
         createdAt: now,
-        referrer: args.referrer,
+        referrer: referrerDomain,
         ua: args.userAgent,
       });
     } catch {
@@ -199,6 +223,50 @@ export const getClicks = query({
       referrer: c.referrer,
       ua: c.userAgent,
     }));
+  },
+});
+
+export const topReferrersForLink = query({
+  args: {
+    linkId: v.id("links"),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+
+    const link = await ctx.db.get(args.linkId);
+    if (!link || link.userId !== userId) return [];
+
+    const limit = Math.min(Math.max(args.limit ?? 5, 1), 20);
+    const counts = new Map<string, number>();
+
+    const events = await ctx.db
+      .query("clickEvents")
+      .withIndex("by_link", (q) => q.eq("linkId", args.linkId))
+      .collect();
+
+    if (events.length > 0) {
+      for (const event of events) {
+        const domain = normalizeReferrerDomain(event.referrer);
+        counts.set(domain, (counts.get(domain) ?? 0) + 1);
+      }
+    } else {
+      const legacy = await ctx.db
+        .query("clicks")
+        .withIndex("by_link", (q) => q.eq("linkId", args.linkId))
+        .collect();
+
+      for (const event of legacy) {
+        const domain = normalizeReferrerDomain(event.referrer);
+        counts.set(domain, (counts.get(domain) ?? 0) + 1);
+      }
+    }
+
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, limit)
+      .map(([domain, count]) => ({ domain, count }));
   },
 });
 
