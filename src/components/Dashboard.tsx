@@ -3,12 +3,11 @@
 import { useConvexAuth, useQuery, useMutation } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "../../convex/_generated/api";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Id } from "../../convex/_generated/dataModel";
 import { ClickDetails } from "./ClickDetails";
 import { LinkQRCode } from "./LinkQRCode";
 import { formatDateTime, formatExpiry, fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/datetime";
-import { useRouter } from "next/navigation";
 
 const MIN_MAX_CLICKS = 1;
 const MAX_MAX_CLICKS = 1_000_000;
@@ -21,9 +20,11 @@ function getErrorMessage(err: unknown) {
 
 export function Dashboard() {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
-  const router = useRouter();
-  const links = useQuery(api.links.list);
-  const analytics = useQuery(api.links.analyticsOverview, { topLimit: 5, recentLimit: 15 });
+  const links = useQuery(api.links.list, isAuthenticated ? {} : "skip");
+  const analytics = useQuery(
+    api.links.analyticsOverview,
+    isAuthenticated ? { topLimit: 5, recentLimit: 15 } : "skip",
+  );
   const createLink = useMutation(api.links.create);
   const removeLink = useMutation(api.links.remove);
   const { signOut } = useAuthActions();
@@ -38,11 +39,6 @@ export function Dashboard() {
   const [copied, setCopied] = useState<string | null>(null);
 
   const authReady = !authLoading && isAuthenticated;
-
-  useEffect(() => {
-    if (authLoading || isAuthenticated) return;
-    router.replace("/login?reason=session-expired&next=/dashboard");
-  }, [authLoading, isAuthenticated, router]);
 
   const formValidationError = useMemo(() => {
     if (maxClicksInput.trim()) {
@@ -93,10 +89,7 @@ export function Dashboard() {
     } catch (err: unknown) {
       const message = getErrorMessage(err);
       if (message.includes("Not authenticated")) {
-        setError("Your session expired. Redirecting to login…");
-        setTimeout(() => {
-          router.replace("/login?reason=session-expired&next=/dashboard");
-        }, 600);
+        setError("Your session expired. Please sign in again.");
       } else {
         setError(message);
       }
@@ -119,10 +112,7 @@ export function Dashboard() {
     } catch (err: unknown) {
       const message = getErrorMessage(err);
       if (message.includes("Not authenticated")) {
-        setError("Your session expired. Redirecting to login…");
-        setTimeout(() => {
-          router.replace("/login?reason=session-expired&next=/dashboard");
-        }, 600);
+        setError("Your session expired. Please sign in again.");
         return;
       }
       setError(message);
@@ -140,7 +130,7 @@ export function Dashboard() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center text-ctp-subtext1">
-        Redirecting to login…
+        Please sign in to view your dashboard.
       </div>
     );
   }
