@@ -1,8 +1,8 @@
 diff --git a/node_modules/@convex-dev/auth/dist/server/implementation/index.js b/node_modules/@convex-dev/auth/dist/server/implementation/index.js
-index 107e1b0..8f021bb 100644
+index 107e1b0..98812d8 100644
 --- a/node_modules/@convex-dev/auth/dist/server/implementation/index.js
 +++ b/node_modules/@convex-dev/auth/dist/server/implementation/index.js
-@@ -115,10 +115,12 @@ export function convexAuth(config_) {
+@@ -115,15 +115,18 @@ export function convexAuth(config_) {
                  path: "/.well-known/openid-configuration",
                  method: "GET",
                  handler: httpActionGeneric(async () => {
@@ -18,3 +18,17 @@ index 107e1b0..8f021bb 100644
                      }), {
                          status: 200,
                          headers: {
+                             "Content-Type": "application/json",
+                             "Cache-Control": "public, max-age=15, stale-while-revalidate=15, stale-if-error=86400",
++                            "Access-Control-Allow-Origin": "*",
+                         },
+                     });
+                 }),
+@@ -137,6 +140,7 @@ export function convexAuth(config_) {
+                         headers: {
+                             "Content-Type": "application/json",
+                             "Cache-Control": "public, max-age=15, stale-while-revalidate=15, stale-if-error=86400",
++                            "Access-Control-Allow-Origin": "*",
+                         },
+                     });
+                 }),

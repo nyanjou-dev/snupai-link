@@ -115,7 +115,11 @@ If you see stale auth errors, clear:
 
 Auth requests are handled by the middleware, which runs on the edge. If `AuthProviderDiscoveryFailed` persists after env var checks, the discovery fetch from Vercel edge to the Convex site may be restricted. As a workaround, ensure `CONVEX_SITE_URL` is set in both Convex and Vercel so the auth domain is consistent.
 
-### token_endpoint patch (AuthProviderDiscoveryFailed)
+### token_endpoint + CORS patch (AuthProviderDiscoveryFailed)
 
-This project applies a [patch-package](https://github.com/ds300/patch-package) patch to `@convex-dev/auth` that adds `token_endpoint` to the OpenID discovery document. Convex Auth's default discovery omits this field, which can cause `AuthProviderDiscoveryFailed` on production. The patch is applied via `postinstall` and lives in `patches/`.
+This project applies a [patch-package](https://github.com/ds300/patch-package) patch to `@convex-dev/auth` that:
+- Adds `token_endpoint` to the OpenID discovery document (OIDC requires it)
+- Adds `Access-Control-Allow-Origin: *` to `/.well-known/openid-configuration` and `/.well-known/jwks.json`
+
+Without these, `AuthProviderDiscoveryFailed` can occur when the browser fetches discovery from your app (e.g. snupai-link.vercel.app) to the Convex site (cross-origin). The patch is applied via `postinstall` and lives in `patches/`.
 
