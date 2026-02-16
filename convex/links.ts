@@ -66,7 +66,7 @@ export const create = mutation({
       slug: finalSlug,
       url: args.url,
       userId,
-      clicks: 0,
+      clickCount: 0,
       createdAt: Date.now(),
     });
   },
@@ -92,12 +92,21 @@ export const remove = mutation({
     const link = await ctx.db.get(args.id);
     if (!link || link.userId !== userId) throw new Error("Not found");
 
-    // Delete associated clicks
-    const clicks = await ctx.db
+    // Delete associated click events.
+    const clickEvents = await ctx.db
+      .query("clickEvents")
+      .withIndex("by_link", (q) => q.eq("linkId", args.id))
+      .collect();
+    for (const click of clickEvents) {
+      await ctx.db.delete(click._id);
+    }
+
+    // Delete associated legacy clicks while table still exists.
+    const legacyClicks = await ctx.db
       .query("clicks")
       .withIndex("by_link", (q) => q.eq("linkId", args.id))
       .collect();
-    for (const click of clicks) {
+    for (const click of legacyClicks) {
       await ctx.db.delete(click._id);
     }
 
@@ -128,14 +137,21 @@ export const trackClick = mutation({
       .first();
     if (!link) return null;
 
-    await ctx.db.insert("clicks", {
+    const now = Date.now();
+
+    await ctx.db.insert("clickEvents", {
       linkId: link._id,
-      timestamp: Date.now(),
+      createdAt: now,
       referrer: args.referrer,
-      userAgent: args.userAgent,
+      ua: args.userAgent,
     });
 
-    await ctx.db.patch(link._id, { clicks: link.clicks + 1 });
+    const currentCount = link.clickCount ?? link.clicks ?? 0;
+    await ctx.db.patch(link._id, {
+      clickCount: currentCount + 1,
+      lastClickedAt: now,
+    });
+
     return link.url;
   },
 });
@@ -147,10 +163,87 @@ export const getClicks = query({
     if (!userId) return [];
     const link = await ctx.db.get(args.linkId);
     if (!link || link.userId !== userId) return [];
-    return await ctx.db
+
+    const events = await ctx.db
+      .query("clickEvents")
+      .withIndex("by_link", (q) => q.eq("linkId", args.linkId))
+      .order("desc")
+      .take(100);
+
+    if (events.length > 0) return events;
+
+    // Backward-compatible read fallback for data created before clickEvents existed.
+    const legacy = await ctx.db
       .query("clicks")
       .withIndex("by_link", (q) => q.eq("linkId", args.linkId))
       .order("desc")
       .take(100);
+
+    return legacy.map((c) => ({
+      _id: c._id,
+      _creationTime: c._creationTime,
+      linkId: c.linkId,
+      createdAt: c.timestamp,
+      referrer: c.referrer,
+      ua: c.userAgent,
+    }));
+  },
+});
+
+export const backfillLinkStats = mutation({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const limit = Math.min(Math.max(args.limit ?? 200, 1), 1000);
+    const links = await ctx.db
+      .query("links")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .take(limit);
+
+    let patched = 0;
+
+    for (const link of links) {
+      const patch: {
+        clickCount?: number;
+        lastClickedAt?: number;
+      } = {};
+
+      if (typeof link.clickCount !== "number") {
+        patch.clickCount = link.clicks ?? 0;
+      }
+
+      if (typeof link.lastClickedAt !== "number") {
+        const latestEvent = await ctx.db
+          .query("clickEvents")
+          .withIndex("by_link", (q) => q.eq("linkId", link._id))
+          .order("desc")
+          .first();
+
+        if (latestEvent) {
+          patch.lastClickedAt = latestEvent.createdAt;
+        } else {
+          const latestLegacy = await ctx.db
+            .query("clicks")
+            .withIndex("by_link", (q) => q.eq("linkId", link._id))
+            .order("desc")
+            .first();
+          if (latestLegacy) patch.lastClickedAt = latestLegacy.timestamp;
+        }
+      }
+
+      if (Object.keys(patch).length > 0) {
+        await ctx.db.patch(link._id, patch);
+        patched += 1;
+      }
+    }
+
+    return {
+      scanned: links.length,
+      patched,
+    };
   },
 });

@@ -138,7 +138,7 @@ export function Dashboard() {
                         onClick={() => setSelectedLink(selectedLink === link._id ? null : link._id)}
                         className="text-ctp-subtext1 hover:text-ctp-text text-sm tabular-nums transition-colors"
                       >
-                        {link.clicks} click{link.clicks !== 1 ? "s" : ""}
+                        {link.clickCount} click{link.clickCount !== 1 ? "s" : ""}
                       </button>
                       <button
                         onClick={() => handleDelete(link._id)}

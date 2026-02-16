@@ -28,13 +28,13 @@ export function ClickDetails({ linkId }: { linkId: Id<"links"> }) {
               {clicks.map((c) => (
                 <tr key={c._id} className="border-t border-ctp-crust">
                   <td className="py-2 pr-4 text-ctp-subtext1 whitespace-nowrap">
-                    {new Date(c.timestamp).toLocaleString()}
+                    {new Date(c.createdAt).toLocaleString()}
                   </td>
                   <td className="py-2 pr-4 text-ctp-subtext1 max-w-[320px] truncate">
                     {c.referrer || "—"}
                   </td>
                   <td className="py-2 pr-4 text-ctp-subtext0 max-w-[420px] truncate">
-                    {c.userAgent || "—"}
+                    {c.ua || "—"}
                   </td>
                 </tr>
               ))}
