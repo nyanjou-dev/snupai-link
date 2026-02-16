@@ -97,7 +97,7 @@ export function Dashboard() {
               {creating ? "..." : "Shorten"}
             </button>
           </div>
-          <p className="text-ctp-overlay0 text-xs">Leave slug empty to auto-generate one.</p>
+          <p className="text-ctp-overlay0 text-xs">Leave slug empty to auto-generate one (usually 3-8 chars).</p>
           {error && <p className="text-red-400 text-sm">{error}</p>}
         </form>
 

@@ -4,6 +4,8 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 
 const SLUG_RE = /^[a-zA-Z0-9_-]+$/;
 const AUTO_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
+const AUTO_MIN_LEN = 3;
+const AUTO_MAX_LEN = 8;
 
 function randomSlug(length = 6) {
   let out = "";
@@ -38,17 +40,21 @@ export const create = mutation({
 
       finalSlug = customSlug;
     } else {
-      // Auto-generate a unique slug.
+      // Auto-generate a unique slug (prefer short slugs first).
       let generated: string | null = null;
-      for (let i = 0; i < 20; i++) {
-        const candidate = randomSlug(6);
-        const existing = await ctx.db
-          .query("links")
-          .withIndex("by_slug", (q) => q.eq("slug", candidate))
-          .first();
-        if (!existing) {
-          generated = candidate;
-          break;
+
+      for (let len = AUTO_MIN_LEN; len <= AUTO_MAX_LEN && !generated; len++) {
+        // Try a handful per length before going longer.
+        for (let i = 0; i < 12; i++) {
+          const candidate = randomSlug(len);
+          const existing = await ctx.db
+            .query("links")
+            .withIndex("by_slug", (q) => q.eq("slug", candidate))
+            .first();
+          if (!existing) {
+            generated = candidate;
+            break;
+          }
         }
       }
 
