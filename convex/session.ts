@@ -1,6 +1,15 @@
 import { query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
+function safeOrigin(value: string | undefined) {
+  if (!value) return null;
+  try {
+    return new URL(value).origin;
+  } catch {
+    return value;
+  }
+}
+
 export const me = query({
   args: {},
   handler: async (ctx) => {
@@ -10,6 +19,25 @@ export const me = query({
     return {
       userId,
       email: user?.email ?? null,
+    };
+  },
+});
+
+export const authDiagnostics = query({
+  args: {},
+  handler: async () => {
+    const convexSite = safeOrigin(process.env.CONVEX_SITE_URL);
+    const configuredAuthDomain = safeOrigin(
+      process.env.CONVEX_SITE_URL ?? process.env.CONVEX_AUTH_SITE_URL ?? process.env.SITE_URL,
+    );
+
+    return {
+      convexSite,
+      configuredAuthDomain,
+      authDomainMatchesConvexSite:
+        Boolean(convexSite) && Boolean(configuredAuthDomain) && convexSite === configuredAuthDomain,
+      hasSiteUrlOverride: Boolean(process.env.SITE_URL),
+      deploymentHint: process.env.CONVEX_CLOUD_URL ?? null,
     };
   },
 });

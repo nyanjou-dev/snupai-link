@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useConvex, useConvexAuth, useMutation } from "convex/react";
+import { useConvex, useConvexAuth, useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -31,6 +31,7 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
   const { signIn } = useAuthActions();
   const convex = useConvex();
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
+  const authDiagnostics = useQuery(api.session.authDiagnostics);
   const cleanupAuth = useMutation(api.authMaintenance.cleanupInvalidAuthReferences);
   const router = useRouter();
   const allowSignup = process.env.NEXT_PUBLIC_ALLOW_SIGNUP !== "false";
@@ -49,6 +50,10 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
   const redirectInProgressRef = useRef(false);
 
   const targetPath = nextPath || "/dashboard";
+  const authConfigMismatch =
+    authDiagnostics !== undefined && authDiagnostics !== null
+      ? !authDiagnostics.authDomainMatchesConvexSite
+      : false;
 
   const verifySession = useCallback(async () => {
     try {
@@ -75,6 +80,16 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
     setReason(reason);
     setNextPath(next);
   }, []);
+
+  useEffect(() => {
+    if (!authDiagnostics) return;
+    console.info("[auth] diagnostics", {
+      convexSite: authDiagnostics.convexSite,
+      configuredAuthDomain: authDiagnostics.configuredAuthDomain,
+      authDomainMatchesConvexSite: authDiagnostics.authDomainMatchesConvexSite,
+      hasSiteUrlOverride: authDiagnostics.hasSiteUrlOverride,
+    });
+  }, [authDiagnostics]);
 
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
@@ -199,6 +214,12 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
           {loginMessage && (
             <p className="rounded-lg border border-ctp-surface0 bg-ctp-mantle px-3 py-2 text-sm text-ctp-subtext1">
               {loginMessage}
+            </p>
+          )}
+          {authConfigMismatch && (
+            <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+              Auth configuration mismatch detected on backend. Sign-in may fail until Convex auth domain and
+              CONVEX_SITE_URL match.
             </p>
           )}
           <input
