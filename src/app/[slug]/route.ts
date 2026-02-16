@@ -20,15 +20,21 @@ export async function GET(
   const referrer = req.headers.get("referer") ?? undefined;
   const userAgent = req.headers.get("user-agent") ?? undefined;
 
-  const url = await client.mutation(api.links.trackClick, {
+  const result = await client.mutation(api.links.trackClick, {
     slug,
     referrer,
     userAgent,
   });
 
-  if (!url) {
-    return new NextResponse("Not found", { status: 404 });
+  if (!result.ok) {
+    if (result.reason === "not_found") {
+      return new NextResponse("Not found", { status: 404 });
+    }
+
+    const reason = result.reason === "max_clicks" ? "max-clicks" : "expired";
+    const unavailableUrl = new URL(`/unavailable?reason=${reason}`, req.url);
+    return NextResponse.redirect(unavailableUrl, { status: 302 });
   }
 
-  return NextResponse.redirect(url, { status: 302 });
+  return NextResponse.redirect(result.url, { status: 302 });
 }

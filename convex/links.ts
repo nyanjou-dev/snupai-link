@@ -135,24 +135,36 @@ export const trackClick = mutation({
       .query("links")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .first();
-    if (!link) return null;
+    if (!link) return { ok: false as const, reason: "not_found" as const };
 
     const now = Date.now();
-
-    await ctx.db.insert("clickEvents", {
-      linkId: link._id,
-      createdAt: now,
-      referrer: args.referrer,
-      ua: args.userAgent,
-    });
-
     const currentCount = link.clickCount ?? link.clicks ?? 0;
+
+    if (typeof link.expiresAt === "number" && now > link.expiresAt) {
+      return { ok: false as const, reason: "expired" as const };
+    }
+
+    if (typeof link.maxClicks === "number" && currentCount >= link.maxClicks) {
+      return { ok: false as const, reason: "max_clicks" as const };
+    }
+
+    try {
+      await ctx.db.insert("clickEvents", {
+        linkId: link._id,
+        createdAt: now,
+        referrer: args.referrer,
+        ua: args.userAgent,
+      });
+    } catch {
+      // Best-effort analytics capture; redirect flow should still work.
+    }
+
     await ctx.db.patch(link._id, {
       clickCount: currentCount + 1,
       lastClickedAt: now,
     });
 
-    return link.url;
+    return { ok: true as const, url: link.url };
   },
 });
 
