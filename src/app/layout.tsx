@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ConvexAuthProvider } from "./ConvexAuthProvider";
+import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: "Clean, fast link shortener by Snupai",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -18,7 +18,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${inter.className} bg-ctp-base text-ctp-text min-h-screen`}>
-        <ConvexAuthProvider>{children}</ConvexAuthProvider>
+        <ConvexAuthNextjsServerProvider>{children}</ConvexAuthNextjsServerProvider>
       </body>
     </html>
   );
