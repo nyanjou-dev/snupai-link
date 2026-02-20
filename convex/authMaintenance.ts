@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { mutation, internalMutation } from "./_generated/server";
 
 /**
  * Repairs broken/stale auth rows (can happen after provider/config changes).
@@ -67,5 +67,29 @@ export const cleanupInvalidAuthReferences = mutation({
       removedSessions,
       removedRefreshTokens,
     };
+  },
+});
+
+/**
+ * One-time migration: marks all existing password accounts as email-verified.
+ * Run once via Convex dashboard after deploying email verification.
+ */
+export const grandfatherExistingAccounts = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const accounts = await ctx.db.query("authAccounts").collect();
+    let patched = 0;
+
+    for (const account of accounts) {
+      if (account.provider !== "password") continue;
+      if (account.emailVerified) continue;
+
+      await ctx.db.patch(account._id, {
+        emailVerified: account.providerAccountId,
+      });
+      patched++;
+    }
+
+    return { patched };
   },
 });

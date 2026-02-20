@@ -52,6 +52,9 @@ export const create = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    const user = await ctx.db.get(userId);
+    if (user?.banned) throw new Error("Account suspended");
+
     let normalizedUrl: string;
     try {
       const parsedUrl = new URL(args.url.trim());
@@ -157,6 +160,10 @@ export const remove = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+
+    const user = await ctx.db.get(userId);
+    if (user?.banned) throw new Error("Account suspended");
+
     const link = await ctx.db.get(args.id);
     if (!link || link.userId !== userId) throw new Error("Not found");
 

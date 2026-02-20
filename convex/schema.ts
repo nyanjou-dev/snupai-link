@@ -2,8 +2,16 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
 
+const { users, ...restAuthTables } = authTables;
+
 export default defineSchema({
-  ...authTables,
+  ...restAuthTables,
+  users: defineTable({
+    ...users.validator.fields,
+    role: v.optional(v.string()),
+    banned: v.optional(v.boolean()),
+    bannedAt: v.optional(v.number()),
+  }).index("email", ["email"]).index("phone", ["phone"]),
   links: defineTable({
     slug: v.string(),
     url: v.string(),

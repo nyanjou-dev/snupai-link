@@ -9,6 +9,7 @@ import { ClickDetails } from "./ClickDetails";
 import { LinkQRCode } from "./LinkQRCode";
 import { ApiKeysSection } from "./ApiKeysSection";
 import { formatDateTime, formatExpiry, fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/datetime";
+import Link from "next/link";
 
 type Tab = "links" | "api-keys";
 
@@ -23,6 +24,7 @@ function getErrorMessage(err: unknown) {
 
 export function Dashboard() {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
+  const me = useQuery(api.session.me, isAuthenticated ? {} : "skip");
   const links = useQuery(api.links.list, isAuthenticated ? {} : "skip");
   const analytics = useQuery(
     api.links.analyticsOverview,
@@ -143,6 +145,25 @@ export function Dashboard() {
     );
   }
 
+  if (me?.banned) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="text-center space-y-4 max-w-sm">
+          <h1 className="text-2xl font-bold text-ctp-red">Account Suspended</h1>
+          <p className="text-ctp-subtext0 text-sm">
+            Your account has been suspended. If you believe this is an error, please contact support.
+          </p>
+          <button
+            onClick={() => signOut()}
+            className="text-ctp-subtext0 hover:text-ctp-subtext1 text-sm transition-colors"
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
       <header className="border-b border-ctp-surface0">
@@ -151,12 +172,22 @@ export function Dashboard() {
             <span className="text-ctp-mauve">snupai</span>
             <span className="text-ctp-subtext1">.link</span>
           </h1>
-          <button
-            onClick={() => signOut()}
-            className="text-ctp-subtext0 hover:text-ctp-subtext1 text-sm transition-colors"
-          >
-            Sign out
-          </button>
+          <div className="flex items-center gap-4">
+            {me?.role === "admin" && (
+              <Link
+                href="/admin"
+                className="text-xs font-semibold bg-ctp-red/20 text-ctp-red border border-ctp-red/30 rounded-full px-2.5 py-1 hover:bg-ctp-red/30 transition-colors"
+              >
+                Admin
+              </Link>
+            )}
+            <button
+              onClick={() => signOut()}
+              className="text-ctp-subtext0 hover:text-ctp-subtext1 text-sm transition-colors"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
         <div className="px-6 max-w-4xl mx-auto">
           <nav className="flex gap-6">

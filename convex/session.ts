@@ -27,6 +27,9 @@ export const me = query({
     return {
       userId,
       email: user?.email ?? null,
+      role: user?.role ?? null,
+      banned: user?.banned ?? false,
+      emailVerified: user?.emailVerificationTime != null,
     };
   },
 });
