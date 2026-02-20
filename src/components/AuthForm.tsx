@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useConvexAuth, useQuery } from "convex/react";
+import { useConvexAuth, useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -27,6 +27,7 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
   const { signIn } = useAuthActions();
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const authDiagnostics = useQuery(api.session.authDiagnostics);
+  const storeUser = useMutation(api.auth.store);
   const router = useRouter();
 
   const allowSignup = process.env.NEXT_PUBLIC_ALLOW_SIGNUP !== "false";
@@ -64,8 +65,10 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
 
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
+    // Store user record after authentication
+    storeUser().catch(console.error);
     router.replace(targetPath);
-  }, [authLoading, isAuthenticated, router, targetPath]);
+  }, [authLoading, isAuthenticated, router, targetPath, storeUser]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,7 +82,7 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
       }
 
       await signIn("password", { email, password, flow });
-      // Redirect is handled by useConvexAuth effect once auth state updates.
+      // Store user record and redirect is handled by useConvexAuth effect once auth state updates.
     } catch (err: unknown) {
       const msg = getErrorMessage(err);
       setError(msg);

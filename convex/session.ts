@@ -15,7 +15,15 @@ export const me = query({
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return null;
+    
+    // Try to get user from users table
     const user = await ctx.db.get(userId);
+    if (!user) {
+      // User record doesn't exist yet - this can happen if store hasn't been called
+      // Return null so the client can call store to create it
+      return null;
+    }
+    
     return {
       userId,
       email: user?.email ?? null,
