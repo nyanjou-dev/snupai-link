@@ -7,7 +7,10 @@ import { useMemo, useState } from "react";
 import { Id } from "../../convex/_generated/dataModel";
 import { ClickDetails } from "./ClickDetails";
 import { LinkQRCode } from "./LinkQRCode";
+import { ApiKeysSection } from "./ApiKeysSection";
 import { formatDateTime, formatExpiry, fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/datetime";
+
+type Tab = "links" | "api-keys";
 
 const MIN_MAX_CLICKS = 1;
 const MAX_MAX_CLICKS = 1_000_000;
@@ -37,6 +40,7 @@ export function Dashboard() {
   const [creating, setCreating] = useState(false);
   const [selectedLink, setSelectedLink] = useState<Id<"links"> | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>("links");
 
   const authReady = !authLoading && isAuthenticated;
 
@@ -137,20 +141,49 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-ctp-surface0 px-6 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold">
-          <span className="text-ctp-mauve">snupai</span>
-          <span className="text-ctp-subtext1">.link</span>
-        </h1>
-        <button
-          onClick={() => signOut()}
-          className="text-ctp-subtext0 hover:text-ctp-subtext1 text-sm transition-colors"
-        >
-          Sign out
-        </button>
+      <header className="border-b border-ctp-surface0">
+        <div className="px-6 py-4 flex items-center justify-between max-w-4xl mx-auto">
+          <h1 className="text-xl font-bold">
+            <span className="text-ctp-mauve">snupai</span>
+            <span className="text-ctp-subtext1">.link</span>
+          </h1>
+          <button
+            onClick={() => signOut()}
+            className="text-ctp-subtext0 hover:text-ctp-subtext1 text-sm transition-colors"
+          >
+            Sign out
+          </button>
+        </div>
+        <div className="px-6 max-w-4xl mx-auto">
+          <nav className="flex gap-6">
+            <button
+              onClick={() => setActiveTab("links")}
+              className={`py-4 px-1 border-b-2 font-medium transition-colors ${
+                activeTab === "links"
+                  ? "border-ctp-mauve text-ctp-mauve"
+                  : "border-transparent text-ctp-subtext0 hover:text-ctp-subtext1"
+              }`}
+            >
+              Links
+            </button>
+            <button
+              onClick={() => setActiveTab("api-keys")}
+              className={`py-4 px-1 border-b-2 font-medium transition-colors ${
+                activeTab === "api-keys"
+                  ? "border-ctp-mauve text-ctp-mauve"
+                  : "border-transparent text-ctp-subtext0 hover:text-ctp-subtext1"
+              }`}
+            >
+              API Keys
+            </button>
+          </nav>
+        </div>
       </header>
 
       <div className="max-w-4xl mx-auto p-6 space-y-8">
+        {activeTab === "api-keys" ? (
+          <ApiKeysSection />
+        ) : (
         <form onSubmit={handleCreate} className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-6 space-y-4">
           <h2 className="text-lg font-semibold text-ctp-text">Create Short Link</h2>
 
@@ -343,6 +376,7 @@ export function Dashboard() {
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );

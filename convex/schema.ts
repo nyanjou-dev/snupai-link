@@ -32,4 +32,18 @@ export default defineSchema({
     userAgent: v.optional(v.string()),
     country: v.optional(v.string()),
   }).index("by_link", ["linkId"]),
+  apiKeys: defineTable({
+    userId: v.id("users"),
+    key: v.string(), // hashed API key
+    name: v.string(), // user-friendly name for the key
+    createdAt: v.number(),
+    lastUsedAt: v.optional(v.number()),
+    isActive: v.boolean(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_key", ["key"]),
+  rateLimit: defineTable({
+    apiKeyId: v.id("apiKeys"),
+    timestamp: v.number(), // for TTL cleanup
+  }).index("by_key_and_time", ["apiKeyId", "timestamp"]),
 });
