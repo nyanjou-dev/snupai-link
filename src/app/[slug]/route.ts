@@ -41,7 +41,81 @@ export async function GET(
   const siteUrl = process.env.SITE_URL || "https://snupai.link";
   const fullUrl = `${siteUrl}/${slug}`;
 
-  // Return HTML with embedded iframe and Open Graph meta tags
+  // Fetch destination page to extract Open Graph meta tags
+  let ogMetaTags = "";
+  let pageTitle = slug;
+  try {
+    const targetResponse = await fetch(targetUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; snupai-link-bot/1.0)",
+      },
+    });
+    if (targetResponse.ok) {
+      const html = await targetResponse.text();
+
+      // Extract Open Graph meta tags
+      const ogProperties = [
+        "og:title",
+        "og:description",
+        "og:image",
+        "og:url",
+        "og:type",
+        "og:site_name",
+        "og:video",
+        "og:video:url",
+        "og:video:secure_url",
+        "og:video:type",
+        "og:video:width",
+        "og:video:height",
+        "twitter:card",
+        "twitter:site",
+        "twitter:title",
+        "twitter:description",
+        "twitter:image",
+        "twitter:player",
+        "twitter:player:width",
+        "twitter:player:height",
+      ];
+
+      for (const prop of ogProperties) {
+        const regex = new RegExp(
+          `<meta[^>]+property=["']${prop}["'][^>]+content=["']([^"']+)["']`,
+          "i"
+        );
+        const match = html.match(regex);
+        if (match && match[1]) {
+          ogMetaTags += `  <meta property="${prop}" content="${match[1]}">\n`;
+          if (prop === "og:title" && !pageTitle) {
+            pageTitle = match[1];
+          }
+        }
+
+        // Also check for twitter:name format
+        const twitterRegex = new RegExp(
+          `<meta[^>]+name=["']${prop}["'][^>]+content=["']([^"']+)["']`,
+          "i"
+        );
+        const twitterMatch = html.match(twitterRegex);
+        if (twitterMatch && twitterMatch[1] && !match) {
+          ogMetaTags += `  <meta name="${prop}" content="${twitterMatch[1]}">\n`;
+        }
+      }
+
+      // Extract title if we don't have og:title
+      if (!ogMetaTags.includes("og:title")) {
+        const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+        if (titleMatch && titleMatch[1]) {
+          pageTitle = titleMatch[1];
+          ogMetaTags = `  <meta property="og:title" content="${titleMatch[1]}">\n` + ogMetaTags;
+        }
+      }
+    }
+  } catch (error) {
+    // If fetching fails, continue without meta tags
+    console.error("Failed to fetch destination meta tags:", error);
+  }
+
+  // Return HTML with embedded iframe and mirrored Open Graph meta tags
   return new Response(
     `
 <!DOCTYPE html>
@@ -49,22 +123,9 @@ export async function GET(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${slug} - snupai.link</title>
+  <title>${pageTitle}</title>
 
-  <!-- Open Graph / Facebook -->
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="${fullUrl}">
-  <meta property="og:title" content="${slug} - Short Link">
-  <meta property="og:description" content="Shortened link powered by snupai.link">
-  <meta property="og:image" content="${siteUrl}/icon.svg">
-
-  <!-- Twitter -->
-  <meta property="twitter:card" content="summary">
-  <meta property="twitter:url" content="${fullUrl}">
-  <meta property="twitter:title" content="${slug} - Short Link">
-  <meta property="twitter:description" content="Shortened link powered by snupai.link">
-  <meta property="twitter:image" content="${siteUrl}/icon.svg">
-
+${ogMetaTags}
   <style>
     * {
       margin: 0;
