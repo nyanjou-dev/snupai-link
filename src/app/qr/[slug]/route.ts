@@ -3,7 +3,7 @@ import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../../convex/_generated/api";
 import QRCode from "qrcode";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 export async function GET(
   req: NextRequest,
@@ -19,7 +19,13 @@ export async function GET(
   const client = new ConvexHttpClient(convexUrl);
 
   // Get the link to generate QR for
-  const link = await client.query(api.links.getBySlug, { slug });
+  let link;
+  try {
+    link = await client.query(api.links.getBySlug, { slug });
+  } catch (error) {
+    console.error("Convex query error:", error);
+    return new Response("Failed to fetch link", { status: 500 });
+  }
 
   if (!link) {
     return new Response("Link not found", { status: 404 });
@@ -37,10 +43,7 @@ export async function GET(
       errorCorrectionLevel: "M",
     });
 
-    // Convert Buffer to Uint8Array for Edge Runtime
-    const qrUint8Array = new Uint8Array(qrBuffer);
-
-    return new Response(qrUint8Array, {
+    return new Response(qrBuffer as any, {
       headers: {
         "Content-Type": "image/png",
         "Cache-Control": "public, max-age=3600, immutable",
