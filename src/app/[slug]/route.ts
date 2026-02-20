@@ -33,7 +33,7 @@ export async function GET(
 
     const reason = result.reason === "max_clicks" ? "max-clicks" : "expired";
     const unavailableUrl = new URL(`/unavailable?reason=${reason}`, req.url);
-    return Response.redirect(unavailableUrl.toString(), { status: 302 });
+    return Response.redirect(unavailableUrl.toString(), 302);
   }
 
   // Render the destination URL in an embed instead of redirecting
