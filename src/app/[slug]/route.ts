@@ -38,8 +38,10 @@ export async function GET(
 
   // Render the destination URL in an embed instead of redirecting
   const targetUrl = result.url;
+  const siteUrl = process.env.SITE_URL || "https://snupai.link";
+  const fullUrl = `${siteUrl}/${slug}`;
 
-  // Return HTML with embedded iframe
+  // Return HTML with embedded iframe and Open Graph meta tags
   return new Response(
     `
 <!DOCTYPE html>
@@ -47,7 +49,22 @@ export async function GET(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Loading...</title>
+  <title>${slug} - snupai.link</title>
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="${fullUrl}">
+  <meta property="og:title" content="${slug} - Short Link">
+  <meta property="og:description" content="Shortened link powered by snupai.link">
+  <meta property="og:image" content="${siteUrl}/icon.svg">
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary">
+  <meta property="twitter:url" content="${fullUrl}">
+  <meta property="twitter:title" content="${slug} - Short Link">
+  <meta property="twitter:description" content="Shortened link powered by snupai.link">
+  <meta property="twitter:image" content="${siteUrl}/icon.svg">
+
   <style>
     * {
       margin: 0;
