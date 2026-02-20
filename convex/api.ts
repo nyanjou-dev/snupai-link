@@ -26,7 +26,7 @@ async function checkRateLimit(
   // Count requests in the current window
   const recentRequests = await ctx.db
     .query("rateLimit")
-    .withIndex("by_key_and_time", (q) =>
+    .withIndex("by_key_and_time", (q: any) =>
       q
         .eq("apiKeyId", apiKeyId)
         .gt("timestamp", windowStart)
