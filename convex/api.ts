@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 // Simple hash function for API keys (must match apiKeys.ts)
 function hashApiKey(key: string): string {
@@ -174,6 +175,39 @@ export const validateKey = query({
     return {
       valid: true,
       name: key.name,
+    };
+  },
+});
+
+export const quotaStatus = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const now = Date.now();
+    const windowStart = now - QUOTA_WINDOW_MS;
+
+    const recentLinks = await ctx.db
+      .query("links")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .filter((q) => q.gt(q.field("createdAt"), windowStart))
+      .collect();
+
+    const used = recentLinks.length;
+    // The earliest link's createdAt + window = when one slot frees up
+    const oldestInWindow = recentLinks.reduce(
+      (min, l) => (l.createdAt < min ? l.createdAt : min),
+      Infinity,
+    );
+    const resetsAt = used > 0 ? oldestInWindow + QUOTA_WINDOW_MS : null;
+
+    return {
+      used,
+      limit: QUOTA_MAX_LINKS,
+      remaining: Math.max(0, QUOTA_MAX_LINKS - used),
+      resetsAt,
+      windowMs: QUOTA_WINDOW_MS,
     };
   },
 });

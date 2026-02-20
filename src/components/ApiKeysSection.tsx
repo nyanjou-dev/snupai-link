@@ -14,8 +14,17 @@ interface ApiKey {
   identifier: string;
 }
 
+function formatTimeRemaining(ms: number) {
+  if (ms <= 0) return "now";
+  const hours = Math.floor(ms / (60 * 60 * 1000));
+  const minutes = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000));
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
 export function ApiKeysSection() {
   const apiKeys = useQuery(api.apiKeys.list);
+  const quota = useQuery(api.api.quotaStatus);
   const createKey = useMutation(api.apiKeys.create);
   const removeKey = useMutation(api.apiKeys.remove);
 
@@ -68,6 +77,34 @@ export function ApiKeysSection() {
           Create API keys to programmatically create shortlinks via our API.
         </p>
       </div>
+
+      {/* Quota status */}
+      {quota && (
+        <div className="bg-ctp-mantle border border-ctp-surface0 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-ctp-subtext1">API Quota</h3>
+              <p className="text-xs text-ctp-overlay1 mt-0.5">
+                {quota.used} / {quota.limit} links used
+                {quota.resetsAt && (
+                  <span>
+                    {" · "}Resets in {formatTimeRemaining(quota.resetsAt - Date.now())}
+                  </span>
+                )}
+              </p>
+            </div>
+            <span className={`text-sm font-mono tabular-nums ${quota.remaining === 0 ? "text-ctp-red" : "text-ctp-green"}`}>
+              {quota.remaining} remaining
+            </span>
+          </div>
+          <div className="mt-2 h-1.5 bg-ctp-surface0 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${quota.remaining === 0 ? "bg-ctp-red" : "bg-ctp-mauve"}`}
+              style={{ width: `${(quota.used / quota.limit) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Create new API key form */}
       <form onSubmit={handleCreate} className="bg-ctp-surface0 rounded-lg p-4">
@@ -199,7 +236,8 @@ export function ApiKeysSection() {
           <div>
             <h4 className="font-medium text-ctp-mauve mb-2">Rate Limits</h4>
             <ul className="list-disc list-inside text-ctp-subtext0 space-y-1">
-              <li>10 requests per 5 seconds per API key</li>
+              <li>10 requests per 5 seconds per API key (burst)</li>
+              <li>20 links per 5 hours per account (quota)</li>
               <li>Exceeded limits will return a 429 error</li>
             </ul>
           </div>
