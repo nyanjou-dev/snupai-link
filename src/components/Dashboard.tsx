@@ -45,6 +45,10 @@ export function Dashboard() {
   const authReady = !authLoading && isAuthenticated;
 
   const formValidationError = useMemo(() => {
+    if (slug.trim() && !/^[a-zA-Z0-9-_]+$/.test(slug.trim())) {
+      return "Slug must contain only letters, numbers, hyphens, and underscores.";
+    }
+
     if (maxClicksInput.trim()) {
       const parsed = Number(maxClicksInput);
       if (!Number.isInteger(parsed)) return "Click limit must be a whole number.";
@@ -62,7 +66,7 @@ export function Dashboard() {
     }
 
     return "";
-  }, [expiresAtInput, maxClicksInput]);
+  }, [expiresAtInput, maxClicksInput, slug]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
