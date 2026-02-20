@@ -60,7 +60,7 @@ export async function GET(
   const fullUrl = `${siteUrl}/${slug}`;
 
   // If it's a social media crawler, return HTML with OG tags
-  if (isSocialCrawler(userAgent)) {
+  if (isSocialCrawler(userAgent ?? null)) {
     let ogMetaTags = "";
     let pageTitle = slug;
 
