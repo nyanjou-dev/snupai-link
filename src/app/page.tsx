@@ -1,7 +1,6 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
-import { useConvexAuth } from "@convex-dev/auth/react";
+import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Dashboard } from "@/components/Dashboard";
 import { Landing } from "@/components/Landing";
