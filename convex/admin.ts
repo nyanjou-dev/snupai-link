@@ -88,7 +88,8 @@ export const banUser = mutation({
       bannedAt: Date.now(),
     });
 
-    await deleteUserData(ctx, args.userId, false);
+    // Invalidate sessions but keep links (redirects are disabled while banned)
+    await deleteSessionsForUser(ctx, args.userId);
   },
 });
 

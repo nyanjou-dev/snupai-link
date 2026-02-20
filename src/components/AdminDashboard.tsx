@@ -25,7 +25,7 @@ export function AdminDashboard() {
   const [error, setError] = useState("");
 
   const handleBan = async (userId: Id<"users">, email: string | null) => {
-    if (!confirm(`Ban ${email ?? "this user"}? This will permanently delete all their links and sign them out.`)) return;
+    if (!confirm(`Ban ${email ?? "this user"}? Their links will be disabled and they will be signed out.`)) return;
     setError("");
     try {
       await banUser({ userId });
@@ -276,35 +276,60 @@ function LinksTab({
     return <div className="text-ctp-subtext0">No links found.</div>;
   }
 
+  // Group links by owner
+  const grouped = new Map<string, { email: string; userId: string; links: LinkRow[] }>();
+  for (const link of links) {
+    const key = link.userId;
+    if (!grouped.has(key)) {
+      grouped.set(key, { email: link.ownerEmail, userId: key, links: [] });
+    }
+    grouped.get(key)!.links.push(link);
+  }
+
+  const groups = [...grouped.values()].sort((a, b) =>
+    a.email.localeCompare(b.email),
+  );
+
   return (
     <div className="space-y-3">
       <h2 className="text-lg font-semibold text-ctp-text">
         All Links <span className="text-ctp-overlay0 text-sm font-normal">({links.length})</span>
       </h2>
-      <div className="space-y-2">
-        {links.map((link) => (
-          <div
-            key={link._id}
-            className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-4 hover:border-ctp-surface1 transition-colors"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <p className="text-ctp-mauve font-medium truncate">
-                  snupai.link/{link.slug}
-                </p>
-                <p className="text-ctp-subtext0 text-sm truncate">{link.url}</p>
-                <div className="mt-1 flex flex-wrap gap-3 text-xs text-ctp-overlay1">
-                  <span>Owner: {link.ownerEmail}</span>
-                  <span>{link.clickCount} click{link.clickCount !== 1 ? "s" : ""}</span>
-                  <span>Created {formatDateTime(link.createdAt)}</span>
+      <div className="space-y-6">
+        {groups.map((group) => (
+          <div key={group.userId}>
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="text-sm font-medium text-ctp-subtext1">{group.email}</h3>
+              <span className="text-xs text-ctp-overlay0">
+                ({group.links.length} link{group.links.length !== 1 ? "s" : ""})
+              </span>
+            </div>
+            <div className="space-y-2">
+              {group.links.map((link) => (
+                <div
+                  key={link._id}
+                  className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-4 hover:border-ctp-surface1 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-ctp-mauve font-medium truncate">
+                        snupai.link/{link.slug}
+                      </p>
+                      <p className="text-ctp-subtext0 text-sm truncate">{link.url}</p>
+                      <div className="mt-1 flex flex-wrap gap-3 text-xs text-ctp-overlay1">
+                        <span>{link.clickCount} click{link.clickCount !== 1 ? "s" : ""}</span>
+                        <span>Created {formatDateTime(link.createdAt)}</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => onDelete(link._id, link.slug)}
+                      className="text-xs bg-ctp-red/10 text-ctp-red border border-ctp-red/30 hover:bg-ctp-red/20 rounded-lg px-3 py-1.5 transition-colors flex-shrink-0"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <button
-                onClick={() => onDelete(link._id, link.slug)}
-                className="text-xs bg-ctp-red/10 text-ctp-red border border-ctp-red/30 hover:bg-ctp-red/20 rounded-lg px-3 py-1.5 transition-colors flex-shrink-0"
-              >
-                Delete
-              </button>
+              ))}
             </div>
           </div>
         ))}

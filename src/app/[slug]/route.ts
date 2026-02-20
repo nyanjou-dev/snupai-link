@@ -50,7 +50,12 @@ export async function GET(
       return new Response("Not found", { status: 404 });
     }
 
-    const reason = result.reason === "max_clicks" ? "max-clicks" : "expired";
+    const reasonMap: Record<string, string> = {
+      max_clicks: "max-clicks",
+      expired: "expired",
+      suspended: "suspended",
+    };
+    const reason = reasonMap[result.reason] ?? "expired";
     const unavailableUrl = new URL(`/unavailable?reason=${reason}`, req.url);
     return Response.redirect(unavailableUrl.toString(), 302);
   }

@@ -54,7 +54,14 @@ export async function POST(request: NextRequest) {
     const errorMessage = error?.message || "Internal server error";
 
     // Handle specific errors
-    if (errorMessage.includes("Rate limit exceeded")) {
+    if (errorMessage.includes("Account suspended")) {
+      return NextResponse.json(
+        { error: "Account suspended" },
+        { status: 403 }
+      );
+    }
+
+    if (errorMessage.includes("Rate limit exceeded") || errorMessage.includes("Quota exceeded")) {
       return NextResponse.json(
         { error: errorMessage },
         { status: 429 }

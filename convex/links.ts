@@ -212,6 +212,9 @@ export const trackClick = mutation({
       .first();
     if (!link) return { ok: false as const, reason: "not_found" as const };
 
+    const owner = await ctx.db.get(link.userId);
+    if (owner?.banned) return { ok: false as const, reason: "suspended" as const };
+
     const now = Date.now();
     const currentCount = link.clickCount ?? link.clicks ?? 0;
 

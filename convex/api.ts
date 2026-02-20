@@ -12,9 +12,13 @@ function hashApiKey(key: string): string {
   return `hash_${Math.abs(hash).toString(16)}`;
 }
 
-// Rate limit configuration
+// Rate limit configuration (burst)
 const RATE_LIMIT_WINDOW = 5000; // 5 seconds
 const RATE_LIMIT_MAX_REQUESTS = 10;
+
+// Link creation quota (per user via API)
+const QUOTA_WINDOW_MS = 5 * 60 * 60 * 1000; // 5 hours
+const QUOTA_MAX_LINKS = 20;
 
 async function checkRateLimit(
   ctx: any,
@@ -78,7 +82,13 @@ export const createLink = mutation({
       throw new Error("Invalid API key");
     }
 
-    // Check rate limit
+    // Check if user is banned
+    const user = await ctx.db.get(key.userId);
+    if (!user || user.banned) {
+      throw new Error("Account suspended");
+    }
+
+    // Check rate limit (burst)
     const rateLimit = await checkRateLimit(ctx, key._id);
     if (!rateLimit.allowed) {
       throw new Error(
@@ -86,9 +96,24 @@ export const createLink = mutation({
       );
     }
 
+    // Check link creation quota (20 per 5 hours per user)
+    const now = Date.now();
+    const quotaWindowStart = now - QUOTA_WINDOW_MS;
+    const recentLinks = await ctx.db
+      .query("links")
+      .withIndex("by_user", (q) => q.eq("userId", key.userId))
+      .filter((q) => q.gt(q.field("createdAt"), quotaWindowStart))
+      .collect();
+
+    if (recentLinks.length >= QUOTA_MAX_LINKS) {
+      throw new Error(
+        `Quota exceeded. Maximum ${QUOTA_MAX_LINKS} links per ${QUOTA_WINDOW_MS / (60 * 60 * 1000)} hours via API.`
+      );
+    }
+
     // Update last used timestamp
     await ctx.db.patch(key._id, {
-      lastUsedAt: Date.now(),
+      lastUsedAt: now,
     });
 
     // Validate slug is unique
@@ -113,7 +138,7 @@ export const createLink = mutation({
       slug: args.slug,
       url: args.url,
       userId: key.userId,
-      createdAt: Date.now(),
+      createdAt: now,
       clickCount: 0,
       expiresAt: args.expiresAt,
       maxClicks: args.maxClicks,

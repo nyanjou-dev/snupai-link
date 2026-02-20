@@ -14,6 +14,15 @@ function contentForReason(reason?: string) {
     };
   }
 
+  if (reason === "suspended") {
+    return {
+      badge: "Suspended",
+      title: "This short link is unavailable",
+      description:
+        "The account that owns this link has been suspended. This link is currently disabled.",
+    };
+  }
+
   return {
     badge: "Expired",
     title: "This short link has expired",
