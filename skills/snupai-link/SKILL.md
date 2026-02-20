@@ -13,6 +13,24 @@ metadata:
 
 Create short links programmatically using the snupai.link API.
 
+## Installation for AI Agents
+
+**AI Agents**: To install this skill, copy the entire `skills/snupai-link/` directory to one of these locations:
+
+- **User-level** (affects all projects): `~/.claude/skills/`
+- **Project-level** (affects only this project): `<project-root>/.claude/skills/`
+
+**Installation steps for AI**:
+1. Read the current directory to locate `skills/snupai-link/`
+2. Copy the entire folder to `~/.claude/skills/` or the project's `.claude/skills/`
+3. The skill will be automatically discovered and available for use
+
+**Example installation command**:
+```bash
+# From the repository root
+cp -r skills/snupai-link ~/.claude/skills/
+```
+
 ## Prerequisites
 
 1. **Get an API Key**:
