@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <!-- Background -->
+  <rect width="180" height="180" rx="40" fill="#181825"/>
+
+  <!-- Simple link icon -->
+  <g transform="translate(45, 45) scale(1.1)">
+    <!-- First link half -->
+    <path d="M 20 25
+             L 10 35
+             A 10 10 0 0 0 10 55
+             L 25 40
+             A 10 10 0 0 0 20 25"
+          fill="none"
+          stroke="#cba6f7"
+          stroke-width="10"
+          stroke-linecap="round"/>
+
+    <!-- Second link half -->
+    <path d="M 35 10
+             L 45 20
+             A 10 10 0 0 0 45 40
+             L 30 55
+             A 10 10 0 0 0 35 10"
+          fill="none"
+          stroke="#89b4fa"
+          stroke-width="10"
+          stroke-linecap="round"/>
+  </g>
+</svg>
