@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as api_ from "../api.js";
+import type * as apiKeys from "../apiKeys.js";
 import type * as auth from "../auth.js";
 import type * as authMaintenance from "../authMaintenance.js";
 import type * as http from "../http.js";
@@ -22,6 +24,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  api: typeof api_;
+  apiKeys: typeof apiKeys;
   auth: typeof auth;
   authMaintenance: typeof authMaintenance;
   http: typeof http;
