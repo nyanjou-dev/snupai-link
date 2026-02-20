@@ -12,6 +12,7 @@
     "lint": "eslint",
     "convex:dev": "convex dev",
     "convex:deploy": "convex deploy",
+    "convex:deploy:with-url": "bunx convex deploy --yes && node scripts/set-site-url.js",
     "convex:auth-debug": "convex env set AUTH_LOG_LEVEL DEBUG"
   },
   "dependencies": {
