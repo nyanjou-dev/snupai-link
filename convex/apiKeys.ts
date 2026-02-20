@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 // Generate a random API key
 function generateApiKey(): string {
@@ -29,7 +30,7 @@ export const create = mutation({
     name: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await ctx.auth.getUserIdentity();
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("Not authenticated");
     }
@@ -40,7 +41,7 @@ export const create = mutation({
 
     // Store in database
     const keyId = await ctx.db.insert("apiKeys", {
-      userId: userId.subject as any,
+      userId: userId,
       key: hashedKey,
       name: args.name,
       createdAt: Date.now(),
@@ -59,14 +60,14 @@ export const create = mutation({
 
 export const list = query({
   handler: async (ctx) => {
-    const userId = await ctx.auth.getUserIdentity();
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       return [];
     }
 
     const keys = await ctx.db
       .query("apiKeys")
-      .withIndex("by_user", (q) => q.eq("userId", userId.subject as any))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
     // Return without the actual key
@@ -87,7 +88,7 @@ export const remove = mutation({
     id: v.id("apiKeys"),
   },
   handler: async (ctx, args) => {
-    const userId = await ctx.auth.getUserIdentity();
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("Not authenticated");
     }
@@ -97,7 +98,7 @@ export const remove = mutation({
       throw new Error("API key not found");
     }
 
-    if (key.userId !== userId.subject) {
+    if (key.userId !== userId) {
       throw new Error("Not authorized");
     }
 
