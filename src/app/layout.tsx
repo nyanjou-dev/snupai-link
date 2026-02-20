@@ -13,6 +13,22 @@ export const metadata: Metadata = {
     icon: "/icon.svg",
     apple: "/apple-icon.svg",
   },
+  openGraph: {
+    type: "website",
+    url: "https://snupai.link",
+    title: "snupai.link - Link Shortener",
+    description: "Clean, fast link shortener. Create short links with API support, rate limiting, and analytics.",
+    siteName: "snupai.link",
+    images: [{
+      url: "https://snupai.link/icon.svg",
+    }],
+  },
+  twitter: {
+    card: "summary",
+    title: "snupai.link - Link Shortener",
+    description: "Clean, fast link shortener. Create short links with API support, rate limiting, and analytics.",
+    images: ["https://snupai.link/icon.svg"],
+  },
 };
 
 export default async function RootLayout({
