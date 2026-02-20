@@ -1,23 +1,16 @@
 "use client";
 
-import { useQuery, useMutation, useConvexAuth } from "convex/react";
+import { useQuery, useConvexAuth } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Dashboard } from "@/components/Dashboard";
 import { Landing } from "@/components/Landing";
-import { useEffect } from "react";
 
 export default function Home() {
   const me = useQuery(api.session.me);
   const { isAuthenticated } = useConvexAuth();
-  const storeUser = useMutation(api.auth.store);
 
-  // Ensure user record is stored when authenticated
-  useEffect(() => {
-    if (isAuthenticated && me === null) {
-      // User is authenticated but record doesn't exist yet, store it
-      storeUser().catch(console.error);
-    }
-  }, [isAuthenticated, me, storeUser]);
+  // Note: With @convex-dev/auth, user records are created automatically during sign-in
+  // No need to manually call store
 
   if (me === undefined) {
     return (
