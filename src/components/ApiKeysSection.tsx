@@ -151,8 +151,8 @@ export function ApiKeysSection() {
                     Created: {new Date(key.createdAt).toLocaleDateString()}
                     {key.lastUsedAt && (
                       <span>
-                        {" • Last used: {new Date(key.lastUsedAt).toLocaleDateString()}
-                        "}
+                        {" • Last used: "}
+                        {new Date(key.lastUsedAt).toLocaleDateString()}
                       </span>
                     )}
                   </div>

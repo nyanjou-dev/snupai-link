@@ -184,6 +184,7 @@ export function Dashboard() {
         {activeTab === "api-keys" ? (
           <ApiKeysSection />
         ) : (
+          <>
         <form onSubmit={handleCreate} className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-6 space-y-4">
           <h2 className="text-lg font-semibold text-ctp-text">Create Short Link</h2>
 
@@ -376,6 +377,7 @@ export function Dashboard() {
             </div>
           )}
         </div>
+          </>
         )}
       </div>
     </div>
