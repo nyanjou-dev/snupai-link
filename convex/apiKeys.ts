@@ -40,9 +40,11 @@ export const create = mutation({
     const hashedKey = hashApiKey(apiKey);
 
     // Store in database
+    const prefix = apiKey.slice(0, 12) + "...";
     const keyId = await ctx.db.insert("apiKeys", {
       userId: userId,
       key: hashedKey,
+      prefix,
       name: args.name,
       createdAt: Date.now(),
       isActive: true,
@@ -77,8 +79,7 @@ export const list = query({
       createdAt: key.createdAt,
       lastUsedAt: key.lastUsedAt,
       isActive: key.isActive,
-      // Show first 8 chars of key as identifier
-      identifier: `${key.key.slice(0, 12)}...`,
+      identifier: key.prefix ?? `${key.key.slice(0, 12)}...`,
     }));
   },
 });

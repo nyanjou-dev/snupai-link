@@ -44,6 +44,7 @@ export default defineSchema({
   apiKeys: defineTable({
     userId: v.id("users"),
     key: v.string(), // hashed API key
+    prefix: v.optional(v.string()), // visible prefix e.g. "snupi_h6Mm..."
     name: v.string(), // user-friendly name for the key
     createdAt: v.number(),
     lastUsedAt: v.optional(v.number()),
