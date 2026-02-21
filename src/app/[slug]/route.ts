@@ -148,6 +148,7 @@ export async function GET(
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="refresh" content="0;url=${targetUrl}">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
   <title>${pageTitle}</title>
 
 ${ogMetaTags}
