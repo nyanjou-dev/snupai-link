@@ -28,7 +28,7 @@ html, body {
 /* Consistent focus ring for interactive elements */
 .focus-ring:focus {
   outline: none;
-  box-shadow: 0 0 0 1px var(--ctp-base), 0 0 0 3px color-mix(in srgb, var(--ctp-mauve) 40%, transparent);
+  box-shadow: 0 0 0 1px var(--ctp-base), 0 0 0 2px color-mix(in srgb, var(--ctp-mauve) 25%, transparent);
 }
 
 /* Smooth transitions globally */
@@ -56,4 +56,13 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 }
 .animate-fade-in-up {
   animation: fade-in-up 0.6s ease-out both;
+}
+
+/* Simple fade-in for collapsible sections */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out both;
 }

@@ -42,14 +42,8 @@ function QuotaBar({ quota }: { quota: QuotaData }) {
       ? "bg-ctp-peach"
       : "bg-ctp-mauve";
 
-  const glowColor = isExhausted
-    ? "shadow-ctp-red/40"
-    : isNearLimit
-      ? "shadow-ctp-peach/30"
-      : "shadow-ctp-mauve/20";
-
   return (
-    <div className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-5 space-y-3">
+    <div className="bg-ctp-mantle/50 rounded-xl p-5 space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-ctp-text">Link Quota</h3>
         <span className="text-xs text-ctp-overlay1">
@@ -58,19 +52,11 @@ function QuotaBar({ quota }: { quota: QuotaData }) {
       </div>
 
       {/* Bar */}
-      <div className="relative">
-        <div className="h-3 bg-ctp-surface0 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all duration-500 ease-out ${barColor} ${pct > 0 ? `shadow-md ${glowColor}` : ""}`}
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-        {/* Tick marks */}
-        <div className="absolute inset-0 flex justify-between px-[1px] pointer-events-none">
-          {Array.from({ length: 5 }, (_, i) => (
-            <div key={i} className="w-px h-3 bg-ctp-overlay0/20" />
-          ))}
-        </div>
+      <div className="h-2 bg-ctp-surface0 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ease-out ${barColor}`}
+          style={{ width: `${pct}%` }}
+        />
       </div>
 
       {/* Stats row */}
@@ -108,6 +94,7 @@ export function ApiKeysSection() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [showDocs, setShowDocs] = useState(false);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,10 +143,10 @@ export function ApiKeysSection() {
       {quota && <QuotaBar quota={quota} />}
 
       {/* Create new API key form */}
-      <form onSubmit={handleCreate} className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-4">
+      <form onSubmit={handleCreate} className="bg-ctp-mantle/50 rounded-xl p-4">
         <h3 className="font-semibold mb-3">Create new API key</h3>
         {error && (
-          <div className="mb-3 p-3 bg-ctp-red/10 border border-ctp-red/30 text-ctp-red rounded-lg text-sm">
+          <div className="mb-3 p-3 bg-ctp-red/10 rounded-xl text-ctp-red text-sm">
             {error}
           </div>
         )}
@@ -169,14 +156,14 @@ export function ApiKeysSection() {
             value={newKeyName}
             onChange={(e) => setNewKeyName(e.target.value)}
             placeholder="Key name (e.g., 'My App', 'Production')"
-            className="flex-1 px-3 py-2.5 bg-ctp-base border border-ctp-surface0 rounded-lg focus-ring"
+            className="flex-1 px-3 py-3 bg-ctp-base/80 border border-ctp-surface0/50 rounded-xl focus-ring"
             disabled={creating}
             required
           />
           <button
             type="submit"
             disabled={creating || !newKeyName.trim()}
-            className="px-4 py-2.5 bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 disabled:cursor-not-allowed text-ctp-crust rounded-lg font-medium transition-colors"
+            className="px-4 py-3 bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 disabled:cursor-not-allowed text-ctp-crust rounded-xl font-medium transition-colors"
           >
             {creating ? "Creating..." : "Create Key"}
           </button>
@@ -185,18 +172,18 @@ export function ApiKeysSection() {
 
       {/* Show created key */}
       {showNewKey && createdKey && (
-        <div className="bg-ctp-green/10 border border-ctp-green/30 text-ctp-text rounded-xl p-4">
+        <div className="bg-ctp-green/5 rounded-xl p-5 text-ctp-text">
           <h3 className="font-semibold mb-2">API Key Created!</h3>
           <p className="text-sm text-ctp-subtext0 mb-3">
             Copy this key now. You won&apos;t be able to see it again.
           </p>
           <div className="flex gap-2">
-            <code className="flex-1 px-3 py-2 bg-ctp-base rounded-lg text-sm font-mono break-all">
+            <code className="flex-1 px-3 py-2 bg-ctp-base rounded-xl text-sm font-mono break-all">
               {createdKey}
             </code>
             <button
               onClick={handleCopy}
-              className="px-4 py-2 bg-ctp-green hover:bg-ctp-green/80 text-ctp-crust rounded-lg font-medium transition-colors"
+              className="px-4 py-2 bg-ctp-green hover:bg-ctp-green/80 text-ctp-crust rounded-xl font-medium transition-colors"
             >
               {copied ? "Copied!" : "Copy"}
             </button>
@@ -214,24 +201,22 @@ export function ApiKeysSection() {
       )}
 
       {/* API keys list */}
-      <div className="bg-ctp-mantle border border-ctp-surface0 rounded-xl">
+      <div className="bg-ctp-mantle/40 rounded-xl">
         {apiKeys && apiKeys.length > 0 ? (
-          <div className="divide-y divide-ctp-surface0">
+          <div className="divide-y divide-ctp-surface0/30">
             {apiKeys.map((key) => (
               <div key={key.id} className="p-4 flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
                     <h4 className="font-medium">{key.name}</h4>
                     {!key.isActive && (
-                      <span className="px-2 py-0.5 bg-ctp-red/20 text-ctp-red text-xs rounded-full">
-                        Inactive
-                      </span>
+                      <span className="text-xs text-ctp-red">Inactive</span>
                     )}
                   </div>
-                  <div className="text-sm text-ctp-subtext0 mt-1">
-                    <code className="bg-ctp-base px-2 py-0.5 rounded-lg">
+                  <div className="text-sm mt-1">
+                    <span className="text-ctp-overlay1 font-mono text-xs">
                       {key.identifier}
-                    </code>
+                    </span>
                   </div>
                   <div className="text-xs text-ctp-overlay0 mt-1">
                     Created: {new Date(key.createdAt).toLocaleDateString()}
@@ -245,7 +230,7 @@ export function ApiKeysSection() {
                 </div>
                 <button
                   onClick={() => handleDelete(key.id)}
-                  className="px-3 py-1.5 text-sm text-ctp-red hover:bg-ctp-red/10 rounded-lg transition-colors"
+                  className="px-3 py-1.5 text-sm text-ctp-red hover:underline transition-colors"
                 >
                   Delete
                 </button>
@@ -260,17 +245,24 @@ export function ApiKeysSection() {
         )}
       </div>
 
-      {/* API Documentation */}
-      <div className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-6">
-        <h3 className="font-semibold mb-3">API Documentation</h3>
-        <div className="space-y-4 text-sm">
-          <div>
-            <h4 className="font-medium text-ctp-mauve mb-2">Create a Shortlink</h4>
-            <p className="text-ctp-subtext0 mb-2">
-              Use your API key to create shortlinks programmatically.
-            </p>
-            <div className="bg-ctp-base rounded-lg p-4 overflow-x-auto">
-              <pre className="text-xs font-mono">
+      {/* API Documentation (collapsible) */}
+      <div>
+        <button
+          onClick={() => setShowDocs(!showDocs)}
+          className="flex items-center gap-1.5 text-sm font-semibold text-ctp-text hover:text-ctp-subtext1 transition-colors"
+        >
+          <span className={`text-xs inline-block transition-transform ${showDocs ? "rotate-90" : ""}`}>▶</span>
+          API Documentation
+        </button>
+        {showDocs && (
+          <div className="animate-fade-in mt-4 space-y-4 text-sm">
+            <div>
+              <h4 className="font-medium text-ctp-subtext1 mb-2">Create a Shortlink</h4>
+              <p className="text-ctp-subtext0 mb-2">
+                Use your API key to create shortlinks programmatically.
+              </p>
+              <div className="bg-ctp-base rounded-lg p-4 overflow-x-auto">
+                <pre className="text-xs font-mono">
 {`curl -X POST https://snupai.link/api/create \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -278,23 +270,23 @@ export function ApiKeysSection() {
     "slug": "my-link",
     "url": "https://example.com/very/long/url"
   }'`}
-              </pre>
+                </pre>
+              </div>
             </div>
-          </div>
 
-          <div>
-            <h4 className="font-medium text-ctp-mauve mb-2">Rate Limits</h4>
-            <ul className="list-disc list-inside text-ctp-subtext0 space-y-1">
-              <li>10 requests per 5 seconds per API key (burst)</li>
-              <li>{quota?.limit ?? 25} links per 5 hours per account (quota, adjustable by admin)</li>
-              <li>Exceeded limits will return a 429 error</li>
-            </ul>
-          </div>
+            <div>
+              <h4 className="font-medium text-ctp-subtext1 mb-2">Rate Limits</h4>
+              <ul className="list-disc list-inside text-ctp-subtext0 space-y-1">
+                <li>10 requests per 5 seconds per API key (burst)</li>
+                <li>{quota?.limit ?? 25} links per 5 hours per account (quota, adjustable by admin)</li>
+                <li>Exceeded limits will return a 429 error</li>
+              </ul>
+            </div>
 
-          <div>
-            <h4 className="font-medium text-ctp-mauve mb-2">Response</h4>
-            <div className="bg-ctp-base rounded-lg p-4">
-              <pre className="text-xs font-mono">
+            <div>
+              <h4 className="font-medium text-ctp-subtext1 mb-2">Response</h4>
+              <div className="bg-ctp-base rounded-lg p-4">
+                <pre className="text-xs font-mono">
 {`{
   "id": "...",
   "slug": "my-link",
@@ -302,10 +294,11 @@ export function ApiKeysSection() {
   "shortUrl": "https://snupai.link/my-link",
   "rateLimitRemaining": 9
 }`}
-              </pre>
+                </pre>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

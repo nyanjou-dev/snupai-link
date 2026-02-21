@@ -43,6 +43,8 @@ export function Dashboard() {
   const [selectedLink, setSelectedLink] = useState<Id<"links"> | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("links");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   const authReady = !authLoading && isAuthenticated;
 
@@ -166,30 +168,30 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-ctp-surface0">
-        <div className="px-6 py-3 flex items-center justify-between max-w-4xl mx-auto">
+      <header className="bg-ctp-mantle/40">
+        <div className="px-6 py-3 flex items-center justify-between max-w-3xl mx-auto">
           <h1 className="text-xl font-bold">
             <span className="text-ctp-mauve">snupai</span>
             <span className="text-ctp-subtext1">.link</span>
           </h1>
-          <div className="flex items-center gap-3">
-            <nav className="flex items-center gap-1 bg-ctp-mantle rounded-lg p-1">
+          <div className="flex items-center gap-4">
+            <nav className="flex items-center gap-4">
               <button
                 onClick={() => setActiveTab("links")}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`text-sm transition-colors ${
                   activeTab === "links"
-                    ? "bg-ctp-surface0 text-ctp-mauve"
-                    : "text-ctp-subtext0 hover:text-ctp-text"
+                    ? "text-ctp-mauve font-medium"
+                    : "text-ctp-overlay1 hover:text-ctp-text"
                 }`}
               >
                 Links
               </button>
               <button
                 onClick={() => setActiveTab("api-keys")}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`text-sm transition-colors ${
                   activeTab === "api-keys"
-                    ? "bg-ctp-surface0 text-ctp-mauve"
-                    : "text-ctp-subtext0 hover:text-ctp-text"
+                    ? "text-ctp-mauve font-medium"
+                    : "text-ctp-overlay1 hover:text-ctp-text"
                 }`}
               >
                 API Keys
@@ -198,7 +200,7 @@ export function Dashboard() {
             {me?.role === "admin" && (
               <Link
                 href="/admin"
-                className="text-xs font-semibold bg-ctp-red/20 text-ctp-red border border-ctp-red/30 rounded-full px-2.5 py-1 hover:bg-ctp-red/30 transition-colors"
+                className="text-xs text-ctp-red hover:text-ctp-red/80 transition-colors"
               >
                 Admin
               </Link>
@@ -213,7 +215,7 @@ export function Dashboard() {
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
+      <div className="max-w-3xl mx-auto px-6 py-8 space-y-8">
         {activeTab === "api-keys" ? (
           <ApiKeysSection />
         ) : (
@@ -221,18 +223,18 @@ export function Dashboard() {
         {quota && (
           <DashboardQuotaBar used={quota.used} limit={quota.limit} remaining={quota.remaining} resetsAt={quota.resetsAt} />
         )}
-        <form onSubmit={handleCreate} className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-6 space-y-4">
+        <form onSubmit={handleCreate} className="bg-ctp-mantle/50 rounded-2xl p-5 space-y-4">
           <h2 className="text-lg font-semibold text-ctp-text">Create Short Link</h2>
 
           <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex items-center bg-ctp-base border border-ctp-surface0 rounded-lg overflow-hidden flex-shrink-0">
+            <div className="flex items-center bg-ctp-base/80 border border-ctp-surface0/50 rounded-xl overflow-hidden flex-shrink-0">
               <span className="text-ctp-subtext0 pl-3 text-sm">snupai.link/</span>
               <input
                 type="text"
                 placeholder="auto"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
-                className="bg-transparent px-2 py-2.5 text-ctp-text placeholder-ctp-overlay0 focus:outline-none w-32"
+                className="bg-transparent px-2 py-3 text-ctp-text placeholder-ctp-overlay0 focus:outline-none w-32"
                 pattern="[a-zA-Z0-9_-]+"
                 title="Leave empty for auto-generated slug"
               />
@@ -242,100 +244,121 @@ export function Dashboard() {
               placeholder="https://example.com/long-url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className="flex-1 bg-ctp-base border border-ctp-surface0 rounded-lg px-4 py-2.5 text-ctp-text placeholder-ctp-overlay0 focus-ring transition-colors"
+              className="flex-1 bg-ctp-base/80 border border-ctp-surface0/50 rounded-xl px-4 py-3 text-ctp-text placeholder-ctp-overlay0 focus-ring transition-colors"
               required
             />
             <button
               type="submit"
               disabled={creating || !!formValidationError || !authReady}
-              className="bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 disabled:cursor-not-allowed text-ctp-crust px-6 py-2.5 rounded-lg font-medium transition-colors whitespace-nowrap"
+              className="bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 disabled:cursor-not-allowed text-ctp-crust px-6 py-3 rounded-xl font-medium transition-colors whitespace-nowrap"
             >
               {creating ? "Creating…" : "Shorten"}
             </button>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1">
-              <label htmlFor="expiry" className="text-ctp-subtext1 text-sm">Expiry (optional)</label>
-              <input
-                id="expiry"
-                type="datetime-local"
-                value={expiresAtInput}
-                min={toDatetimeLocalValue(Date.now() + MIN_EXPIRY_MS_FROM_NOW)}
-                onChange={(e) => setExpiresAtInput(e.target.value)}
-                className="w-full bg-ctp-base border border-ctp-surface0 rounded-lg px-3 py-2.5 text-ctp-text focus-ring transition-colors"
-              />
-              <p className="text-[11px] text-ctp-overlay0">Uses your local timezone ({Intl.DateTimeFormat().resolvedOptions().timeZone}).</p>
-            </div>
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="flex items-center gap-1.5 text-xs text-ctp-overlay1 hover:text-ctp-subtext1 transition-colors"
+          >
+            <span className={`inline-block transition-transform ${showAdvanced ? "rotate-90" : ""}`}>▶</span>
+            Advanced options
+          </button>
 
-            <div className="space-y-1">
-              <label htmlFor="maxClicks" className="text-ctp-subtext1 text-sm">Click limit (optional)</label>
-              <input
-                id="maxClicks"
-                type="number"
-                min={MIN_MAX_CLICKS}
-                max={MAX_MAX_CLICKS}
-                step={1}
-                placeholder="e.g. 100"
-                value={maxClicksInput}
-                onChange={(e) => setMaxClicksInput(e.target.value)}
-                className="w-full bg-ctp-base border border-ctp-surface0 rounded-lg px-3 py-2.5 text-ctp-text placeholder-ctp-overlay0 focus-ring transition-colors"
-              />
-              <p className="text-[11px] text-ctp-overlay0">Set between 1 and {MAX_MAX_CLICKS.toLocaleString()}.</p>
+          {showAdvanced && (
+            <div className="animate-fade-in grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <label htmlFor="expiry" className="text-ctp-subtext1 text-sm">Expiry (optional)</label>
+                <input
+                  id="expiry"
+                  type="datetime-local"
+                  value={expiresAtInput}
+                  min={toDatetimeLocalValue(Date.now() + MIN_EXPIRY_MS_FROM_NOW)}
+                  onChange={(e) => setExpiresAtInput(e.target.value)}
+                  className="w-full bg-ctp-base/80 border border-ctp-surface0/50 rounded-xl px-3 py-3 text-ctp-text focus-ring transition-colors"
+                />
+                <p className="text-[11px] text-ctp-overlay0">Uses your local timezone ({Intl.DateTimeFormat().resolvedOptions().timeZone}).</p>
+              </div>
+
+              <div className="space-y-1">
+                <label htmlFor="maxClicks" className="text-ctp-subtext1 text-sm">Click limit (optional)</label>
+                <input
+                  id="maxClicks"
+                  type="number"
+                  min={MIN_MAX_CLICKS}
+                  max={MAX_MAX_CLICKS}
+                  step={1}
+                  placeholder="e.g. 100"
+                  value={maxClicksInput}
+                  onChange={(e) => setMaxClicksInput(e.target.value)}
+                  className="w-full bg-ctp-base/80 border border-ctp-surface0/50 rounded-xl px-3 py-3 text-ctp-text placeholder-ctp-overlay0 focus-ring transition-colors"
+                />
+                <p className="text-[11px] text-ctp-overlay0">Set between 1 and {MAX_MAX_CLICKS.toLocaleString()}.</p>
+              </div>
             </div>
-          </div>
+          )}
 
           <p className="text-ctp-overlay0 text-xs">Leave slug empty to auto-generate one (usually 3–8 chars).</p>
-          {(error || formValidationError) && <p className="text-ctp-red text-sm">{error || formValidationError}</p>}
+          {(error || formValidationError) && <p className="text-ctp-red/90 text-sm">{error || formValidationError}</p>}
         </form>
 
-        <section className="space-y-6">
-          <h2 className="text-lg font-semibold text-ctp-text">Analytics</h2>
-          {!analytics ? (
-            <div className="text-ctp-subtext0">Loading analytics…</div>
-          ) : (
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div>
-                <h3 className="text-sm font-medium text-ctp-subtext1 mb-3">Top links by clicks</h3>
-                {analytics.topLinks.length === 0 ? (
-                  <div className="rounded-lg border border-ctp-surface0 bg-ctp-mantle p-4 text-center text-sm text-ctp-overlay0">
-                    No links have been clicked yet.
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {analytics.topLinks.map((link) => (
-                      <div
-                        key={link._id}
-                        className="bg-ctp-mantle border border-ctp-surface0 rounded-lg p-3 flex items-center justify-between gap-3"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-ctp-mauve truncate">snupai.link/{link.slug}</p>
-                          <p className="text-ctp-overlay1 text-xs truncate">{link.url}</p>
-                        </div>
-                        <p className="text-sm text-ctp-text tabular-nums">{link.clickCount}</p>
+        <section className="space-y-4">
+          <button
+            onClick={() => setShowAnalytics(!showAnalytics)}
+            className="flex items-center gap-1.5 text-lg font-semibold text-ctp-text hover:text-ctp-subtext1 transition-colors"
+          >
+            <span className={`text-sm inline-block transition-transform ${showAnalytics ? "rotate-90" : ""}`}>▶</span>
+            Analytics
+          </button>
+          {showAnalytics && (
+            <div className="animate-fade-in">
+              {!analytics ? (
+                <div className="text-ctp-subtext0">Loading analytics…</div>
+              ) : (
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <div>
+                    <h3 className="text-sm font-medium text-ctp-subtext1 mb-3">Top links by clicks</h3>
+                    {analytics.topLinks.length === 0 ? (
+                      <div className="bg-ctp-mantle/40 rounded-xl p-4 text-center text-sm text-ctp-overlay0">
+                        No links have been clicked yet.
                       </div>
-                    ))}
+                    ) : (
+                      <div className="space-y-2">
+                        {analytics.topLinks.map((link) => (
+                          <div
+                            key={link._id}
+                            className="bg-ctp-mantle/40 rounded-lg p-3 flex items-center justify-between gap-3"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-ctp-mauve truncate">snupai.link/{link.slug}</p>
+                              <p className="text-ctp-overlay1 text-xs truncate">{link.url}</p>
+                            </div>
+                            <p className="text-sm text-ctp-text tabular-nums">{link.clickCount}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              <div>
-                <h3 className="text-sm font-medium text-ctp-subtext1 mb-3">Recent clicks</h3>
-                {analytics.recentClicks.length === 0 ? (
-                  <div className="rounded-lg border border-ctp-surface0 bg-ctp-mantle p-4 text-center text-sm text-ctp-overlay0">
-                    Nothing to show yet.
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                    {analytics.recentClicks.map((click) => (
-                      <div key={click._id} className="bg-ctp-mantle border border-ctp-surface0 rounded-lg p-3">
-                        <p className="text-ctp-text text-sm">snupai.link/{click.slug}</p>
-                        <p className="text-ctp-overlay1 text-xs">{formatDateTime(click.createdAt)}</p>
+                  <div>
+                    <h3 className="text-sm font-medium text-ctp-subtext1 mb-3">Recent clicks</h3>
+                    {analytics.recentClicks.length === 0 ? (
+                      <div className="bg-ctp-mantle/40 rounded-xl p-4 text-center text-sm text-ctp-overlay0">
+                        Nothing to show yet.
                       </div>
-                    ))}
+                    ) : (
+                      <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                        {analytics.recentClicks.map((click) => (
+                          <div key={click._id} className="bg-ctp-mantle/40 rounded-lg p-3">
+                            <p className="text-ctp-text text-sm">snupai.link/{click.slug}</p>
+                            <p className="text-ctp-overlay1 text-xs">{formatDateTime(click.createdAt)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
         </section>
@@ -345,7 +368,7 @@ export function Dashboard() {
           {!links ? (
             <div className="text-ctp-subtext0">Loading...</div>
           ) : links.length === 0 ? (
-            <div className="text-ctp-subtext0 bg-ctp-mantle border border-ctp-surface0 rounded-xl p-8 text-center">
+            <div className="text-ctp-subtext0 bg-ctp-mantle/40 rounded-2xl p-8 text-center">
               <p className="text-sm text-ctp-overlay0">No links yet. Create your first short link above.</p>
             </div>
           ) : (
@@ -353,7 +376,7 @@ export function Dashboard() {
               {links.map((link) => (
                 <div
                   key={link._id}
-                  className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-4 hover:bg-ctp-mantle/80 transition-colors"
+                  className="bg-ctp-mantle/40 rounded-xl p-5 hover:bg-ctp-mantle/60 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
@@ -370,14 +393,14 @@ export function Dashboard() {
                         )}
                       </div>
                       <p className="text-ctp-subtext0 text-sm truncate">{link.url}</p>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-                        <span className="text-ctp-overlay0">Last clicked: {formatDateTime(link.lastClickedAt)}</span>
-                        <span className="rounded-full border border-ctp-surface0 bg-ctp-base px-2 py-0.5 text-ctp-subtext1">
-                          Expires: {formatExpiry(link.expiresAt)}
-                        </span>
-                        <span className="rounded-full border border-ctp-surface0 bg-ctp-base px-2 py-0.5 text-ctp-subtext1">
-                          Limit: {typeof link.maxClicks === "number" ? link.maxClicks.toLocaleString() : "Unlimited"}
-                        </span>
+                      <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-ctp-overlay0">
+                        <span>Last clicked: {formatDateTime(link.lastClickedAt)}</span>
+                        {link.expiresAt && (
+                          <span>Expires: {formatExpiry(link.expiresAt)}</span>
+                        )}
+                        {typeof link.maxClicks === "number" && (
+                          <span>Limit: {link.maxClicks.toLocaleString()}</span>
+                        )}
                       </div>
                     </div>
 
@@ -442,7 +465,7 @@ function DashboardQuotaBar({
       : "bg-ctp-mauve";
 
   return (
-    <div className="bg-ctp-mantle border border-ctp-surface0 rounded-lg px-4 py-2.5 space-y-2">
+    <div className="bg-ctp-mantle/50 rounded-xl px-4 py-3 space-y-2">
       <div className="flex items-center justify-between text-xs">
         <span className="text-ctp-subtext1">
           <span className={`font-mono font-bold tabular-nums ${isExhausted ? "text-ctp-red" : "text-ctp-text"}`}>

@@ -177,19 +177,19 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
   const loginMessage = reason === "session-expired" ? "Your session expired. Please sign in again." : "";
 
   const inputClasses =
-    "w-full bg-ctp-base border border-ctp-surface0 rounded-lg px-4 py-2.5 text-ctp-text placeholder-ctp-overlay0 focus-ring transition-colors";
+    "w-full bg-ctp-base/80 border border-ctp-surface0/50 rounded-xl px-4 py-3 text-ctp-text placeholder-ctp-overlay0 focus-ring transition-colors";
 
   // --- Verify Email Step ---
   if (step === "verify-email") {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="w-full max-w-sm bg-ctp-mantle border border-ctp-surface0 rounded-xl p-8 space-y-6">
+        <div className="w-full max-w-sm bg-ctp-mantle/60 rounded-2xl p-8 sm:p-10 space-y-8">
           <div className="text-center">
             <h1 className="text-3xl font-bold">
               <span className="text-ctp-mauve">snupai</span>
               <span className="text-ctp-subtext1">.link</span>
             </h1>
-            <p className="text-ctp-subtext0 mt-2">Check your email</p>
+            <p className="text-ctp-overlay1 mt-3 text-sm">Check your email</p>
             <p className="text-ctp-overlay1 text-sm mt-1">
               We sent a 6-digit code to <span className="text-ctp-text">{email}</span>
             </p>
@@ -208,17 +208,17 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
               required
               autoFocus
             />
-            {error && <p className="text-ctp-red text-sm">{error}</p>}
+            {error && <p className="text-ctp-red/90 text-sm">{error}</p>}
             <button
               type="submit"
               disabled={loading || verificationCode.length !== 6}
-              className="w-full bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 disabled:cursor-not-allowed text-ctp-crust py-2.5 rounded-lg font-medium transition-colors"
+              className="w-full bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 disabled:cursor-not-allowed text-ctp-crust py-3 rounded-xl font-medium transition-colors"
             >
               {loading ? "..." : "Verify"}
             </button>
           </form>
 
-          <div className="flex items-center justify-between text-sm border-t border-ctp-surface0 pt-4">
+          <div className="flex items-center justify-between text-sm pt-6">
             <button
               type="button"
               onClick={handleResendVerification}
@@ -248,13 +248,13 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
   if (step === "forgot-password") {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="w-full max-w-sm bg-ctp-mantle border border-ctp-surface0 rounded-xl p-8 space-y-6">
+        <div className="w-full max-w-sm bg-ctp-mantle/60 rounded-2xl p-8 sm:p-10 space-y-8">
           <div className="text-center">
             <h1 className="text-3xl font-bold">
               <span className="text-ctp-mauve">snupai</span>
               <span className="text-ctp-subtext1">.link</span>
             </h1>
-            <p className="text-ctp-subtext0 mt-2">Reset your password</p>
+            <p className="text-ctp-overlay1 mt-3 text-sm">Reset your password</p>
           </div>
 
           <form onSubmit={handleForgotPassword} className="space-y-4">
@@ -267,17 +267,17 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
               required
               autoFocus
             />
-            {error && <p className="text-ctp-red text-sm">{error}</p>}
+            {error && <p className="text-ctp-red/90 text-sm">{error}</p>}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 disabled:cursor-not-allowed text-ctp-crust py-2.5 rounded-lg font-medium transition-colors"
+              className="w-full bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 disabled:cursor-not-allowed text-ctp-crust py-3 rounded-xl font-medium transition-colors"
             >
               {loading ? "..." : "Send reset code"}
             </button>
           </form>
 
-          <div className="text-center text-sm border-t border-ctp-surface0 pt-4">
+          <div className="text-center text-sm pt-6">
             <button
               type="button"
               onClick={() => {
@@ -298,13 +298,13 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
   if (step === "reset-verification") {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="w-full max-w-sm bg-ctp-mantle border border-ctp-surface0 rounded-xl p-8 space-y-6">
+        <div className="w-full max-w-sm bg-ctp-mantle/60 rounded-2xl p-8 sm:p-10 space-y-8">
           <div className="text-center">
             <h1 className="text-3xl font-bold">
               <span className="text-ctp-mauve">snupai</span>
               <span className="text-ctp-subtext1">.link</span>
             </h1>
-            <p className="text-ctp-subtext0 mt-2">Enter your reset code</p>
+            <p className="text-ctp-overlay1 mt-3 text-sm">Enter your reset code</p>
             <p className="text-ctp-overlay1 text-sm mt-1">
               We sent a 6-digit code to <span className="text-ctp-text">{email}</span>
             </p>
@@ -331,17 +331,17 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
               className={inputClasses}
               required
             />
-            {error && <p className="text-ctp-red text-sm">{error}</p>}
+            {error && <p className="text-ctp-red/90 text-sm">{error}</p>}
             <button
               type="submit"
               disabled={loading || verificationCode.length !== 6}
-              className="w-full bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 disabled:cursor-not-allowed text-ctp-crust py-2.5 rounded-lg font-medium transition-colors"
+              className="w-full bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 disabled:cursor-not-allowed text-ctp-crust py-3 rounded-xl font-medium transition-colors"
             >
               {loading ? "..." : "Reset password"}
             </button>
           </form>
 
-          <div className="flex items-center justify-between text-sm border-t border-ctp-surface0 pt-4">
+          <div className="flex items-center justify-between text-sm pt-6">
             <button
               type="button"
               onClick={handleResendReset}
@@ -371,7 +371,7 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
   // --- Credentials Step (default) ---
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-sm bg-ctp-mantle border border-ctp-surface0 rounded-xl p-8 space-y-6">
+      <div className="w-full max-w-sm bg-ctp-mantle/60 rounded-2xl p-8 sm:p-10 space-y-8">
         {onBack && (
           <button onClick={onBack} className="text-ctp-subtext0 hover:text-ctp-subtext1 text-sm">
             &larr; Back
@@ -382,19 +382,19 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
             <span className="text-ctp-mauve">snupai</span>
             <span className="text-ctp-subtext1">.link</span>
           </h1>
-          <p className="text-ctp-subtext0 mt-2">
+          <p className="text-ctp-overlay1 mt-3 text-sm">
             {flow === "signIn" ? "Welcome back" : "Create your account"}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {loginMessage && (
-            <p className="rounded-lg border border-ctp-surface0 bg-ctp-base px-3 py-2 text-sm text-ctp-subtext1">
+            <p className="rounded-xl bg-ctp-base/60 px-3 py-2 text-sm text-ctp-subtext1">
               {loginMessage}
             </p>
           )}
           {authConfigMismatch && (
-            <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+            <p className="rounded-xl bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
               Auth configuration mismatch detected on backend. Sign-in may fail until Convex auth domain and
               CONVEX_SITE_URL match.
             </p>
@@ -415,17 +415,17 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
             className={inputClasses}
             required
           />
-          {error && <p className="text-ctp-red text-sm">{error}</p>}
+          {error && <p className="text-ctp-red/90 text-sm">{error}</p>}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 disabled:cursor-not-allowed text-ctp-crust py-2.5 rounded-lg font-medium transition-colors"
+            className="w-full bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 disabled:cursor-not-allowed text-ctp-crust py-3 rounded-xl font-medium transition-colors"
           >
             {loading ? "..." : flow === "signIn" ? "Sign In" : "Sign Up"}
           </button>
         </form>
 
-        <div className="space-y-2 text-center text-sm border-t border-ctp-surface0 pt-4">
+        <div className="space-y-2 text-center text-sm pt-6">
           {flow === "signIn" && (
             <p>
               <button

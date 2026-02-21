@@ -69,7 +69,7 @@ export function LinkQRCode({ value, slug, size = 128, className = "", showAction
   return (
     <div className={className}>
       <div
-        className="rounded-lg border border-ctp-surface0 bg-ctp-base overflow-hidden"
+        className="rounded-xl bg-ctp-base overflow-hidden"
         style={{ width: size, height: size }}
       >
         {dataUrl ? (
@@ -81,11 +81,11 @@ export function LinkQRCode({ value, slug, size = 128, className = "", showAction
       </div>
 
       {showActions && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+        <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
           <button
             onClick={handleDownload}
             disabled={!dataUrl}
-            className="px-3 py-1.5 rounded-lg border border-ctp-surface1 text-ctp-subtext1 hover:text-ctp-text hover:border-ctp-subtext0 disabled:opacity-50 transition-colors"
+            className="text-ctp-overlay1 hover:text-ctp-text disabled:opacity-50 transition-colors"
           >
             Download PNG
           </button>
@@ -94,7 +94,7 @@ export function LinkQRCode({ value, slug, size = 128, className = "", showAction
             <button
               onClick={handleCopyImage}
               disabled={!dataUrl}
-              className="px-3 py-1.5 rounded-lg border border-ctp-surface1 text-ctp-subtext1 hover:text-ctp-text hover:border-ctp-subtext0 disabled:opacity-50 transition-colors"
+              className="text-ctp-overlay1 hover:text-ctp-text disabled:opacity-50 transition-colors"
             >
               Copy image
             </button>

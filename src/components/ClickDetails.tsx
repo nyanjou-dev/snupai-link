@@ -19,7 +19,7 @@ export function ClickDetails({
   const topReferrers = useQuery(api.links.topReferrersForLink, { linkId, limit: 5 });
 
   return (
-    <div className="mt-4 border-t border-ctp-surface0 pt-4 space-y-4">
+    <div className="mt-6 pt-6 space-y-4">
       <div>
         <h3 className="text-sm font-medium text-ctp-subtext1 mb-2">QR code (destination URL)</h3>
         <LinkQRCode value={targetUrl} slug={slug} size={160} showActions />
@@ -30,7 +30,7 @@ export function ClickDetails({
         {!topReferrers ? (
           <div className="text-ctp-subtext0 text-sm">Loading…</div>
         ) : topReferrers.length === 0 ? (
-          <div className="rounded-lg border border-ctp-surface0 bg-ctp-base p-3 text-ctp-subtext0 text-sm">
+          <div className="rounded-xl bg-ctp-base/60 p-3 text-ctp-subtext0 text-sm">
             No referrer data yet. Once people click this link, common sources will appear here.
           </div>
         ) : (
@@ -38,7 +38,7 @@ export function ClickDetails({
             {topReferrers.map((item) => (
               <div
                 key={item.domain}
-                className="rounded-lg border border-ctp-surface0 bg-ctp-base px-3 py-2 flex items-center justify-between gap-3"
+                className="rounded-xl bg-ctp-base/60 px-3 py-2 flex items-center justify-between gap-3"
               >
                 <span className="text-ctp-subtext1 text-sm truncate">{item.domain}</span>
                 <span className="text-ctp-text text-sm tabular-nums">{item.count}</span>
@@ -53,11 +53,11 @@ export function ClickDetails({
         {!clicks ? (
           <div className="text-ctp-subtext0 text-sm">Loading…</div>
         ) : clicks.length === 0 ? (
-          <div className="rounded-lg border border-ctp-surface0 bg-ctp-base p-3 text-ctp-subtext0 text-sm">
+          <div className="rounded-xl bg-ctp-base/60 p-3 text-ctp-subtext0 text-sm">
             No clicks recorded yet for this link.
           </div>
         ) : (
-          <div className="rounded-lg border border-ctp-surface0 overflow-hidden">
+          <div className="rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -69,7 +69,7 @@ export function ClickDetails({
                 </thead>
                 <tbody>
                   {clicks.map((c, i) => (
-                    <tr key={c._id} className={`border-t border-ctp-surface0 ${i % 2 === 0 ? "bg-ctp-base/50" : ""}`}>
+                    <tr key={c._id} className={`border-t border-ctp-surface0/30 ${i % 2 === 0 ? "bg-ctp-base/50" : ""}`}>
                       <td className="py-2 px-4 text-ctp-subtext1 whitespace-nowrap">
                         {formatDateTime(c.createdAt)}
                       </td>

@@ -85,35 +85,35 @@ export function AdminDashboard() {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-ctp-surface0">
+      <header className="bg-ctp-mantle/40">
         <div className="px-6 py-3 flex items-center justify-between max-w-5xl mx-auto">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold">
               <span className="text-ctp-mauve">snupai</span>
               <span className="text-ctp-subtext1">.link</span>
             </h1>
-            <span className="text-xs font-semibold bg-ctp-red/20 text-ctp-red border border-ctp-red/30 rounded-full px-2 py-0.5">
+            <span className="text-xs text-ctp-red">
               Admin
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <nav className="flex items-center gap-1 bg-ctp-mantle rounded-lg p-1">
+          <div className="flex items-center gap-4">
+            <nav className="flex items-center gap-4">
               <button
                 onClick={() => setActiveTab("users")}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`text-sm transition-colors ${
                   activeTab === "users"
-                    ? "bg-ctp-surface0 text-ctp-mauve"
-                    : "text-ctp-subtext0 hover:text-ctp-text"
+                    ? "text-ctp-mauve font-medium"
+                    : "text-ctp-overlay1 hover:text-ctp-text"
                 }`}
               >
                 Users
               </button>
               <button
                 onClick={() => setActiveTab("links")}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`text-sm transition-colors ${
                   activeTab === "links"
-                    ? "bg-ctp-surface0 text-ctp-mauve"
-                    : "text-ctp-subtext0 hover:text-ctp-text"
+                    ? "text-ctp-mauve font-medium"
+                    : "text-ctp-overlay1 hover:text-ctp-text"
                 }`}
               >
                 Links
@@ -135,9 +135,9 @@ export function AdminDashboard() {
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto p-6 space-y-6">
+      <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
         {error && (
-          <div className="rounded-lg border border-ctp-red/30 bg-ctp-red/10 px-4 py-3 text-sm text-ctp-red">
+          <div className="rounded-xl bg-ctp-red/10 px-4 py-3 text-sm text-ctp-red">
             {error}
           </div>
         )}
@@ -243,7 +243,7 @@ function UserCard({
   };
 
   return (
-    <div className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-4 hover:bg-ctp-mantle/80 transition-colors">
+    <div className="bg-ctp-mantle/40 rounded-xl p-5 hover:bg-ctp-mantle/60 transition-colors">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -251,23 +251,13 @@ function UserCard({
               {user.email ?? "No email"}
             </span>
             {isAdmin && (
-              <span className="text-xs font-semibold bg-ctp-mauve/20 text-ctp-mauve border border-ctp-mauve/30 rounded-full px-2 py-0.5">
-                Admin
-              </span>
+              <span className="text-xs text-ctp-mauve">Admin</span>
             )}
             {user.banned && (
-              <span className="text-xs font-semibold bg-ctp-red/20 text-ctp-red border border-ctp-red/30 rounded-full px-2 py-0.5">
-                Banned
-              </span>
+              <span className="text-xs text-ctp-red">Banned</span>
             )}
-            {user.emailVerified ? (
-              <span className="text-xs font-semibold bg-ctp-green/20 text-ctp-green border border-ctp-green/30 rounded-full px-2 py-0.5">
-                Verified
-              </span>
-            ) : (
-              <span className="text-xs font-semibold bg-ctp-yellow/20 text-ctp-yellow border border-ctp-yellow/30 rounded-full px-2 py-0.5">
-                Unverified
-              </span>
+            {!user.emailVerified && (
+              <span className="text-xs text-ctp-yellow">Unverified</span>
             )}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-ctp-overlay1">
@@ -321,31 +311,31 @@ function UserCard({
         </div>
 
         {!isAdmin && (
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-3 flex-shrink-0">
             {user.banned ? (
               <button
                 onClick={() => onUnban(user._id)}
-                className="text-xs bg-ctp-green/10 text-ctp-green border border-ctp-green/30 hover:bg-ctp-green/20 rounded-lg px-3 py-1.5 transition-colors"
+                className="text-xs text-ctp-green hover:underline transition-colors"
               >
                 Unban
               </button>
             ) : (
               <button
                 onClick={() => onBan(user._id, user.email)}
-                className="text-xs bg-ctp-peach/10 text-ctp-peach border border-ctp-peach/30 hover:bg-ctp-peach/20 rounded-lg px-3 py-1.5 transition-colors"
+                className="text-xs text-ctp-peach hover:underline transition-colors"
               >
                 Ban
               </button>
             )}
             <button
               onClick={() => onForceLogout(user._id, user.email)}
-              className="text-xs bg-ctp-yellow/10 text-ctp-yellow border border-ctp-yellow/30 hover:bg-ctp-yellow/20 rounded-lg px-3 py-1.5 transition-colors"
+              className="text-xs text-ctp-yellow hover:underline transition-colors"
             >
               Logout
             </button>
             <button
               onClick={() => onDelete(user._id, user.email)}
-              className="text-xs bg-ctp-red/10 text-ctp-red border border-ctp-red/30 hover:bg-ctp-red/20 rounded-lg px-3 py-1.5 transition-colors"
+              className="text-xs text-ctp-red hover:underline transition-colors"
             >
               Delete
             </button>
@@ -395,7 +385,7 @@ function LinksTab({
       <div className="space-y-6">
         {groups.map((group) => (
           <div key={group.userId}>
-            <div className="flex items-center gap-2 border-b border-ctp-surface0 pb-2 mb-3">
+            <div className="flex items-center gap-2 pb-2 mb-4">
               <h3 className="text-sm font-medium text-ctp-subtext1">{group.email}</h3>
               <span className="text-xs text-ctp-overlay0">
                 ({group.links.length} link{group.links.length !== 1 ? "s" : ""})
@@ -405,7 +395,7 @@ function LinksTab({
               {group.links.map((link) => (
                 <div
                   key={link._id}
-                  className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-4 hover:bg-ctp-mantle/80 transition-colors"
+                  className="bg-ctp-mantle/40 rounded-xl p-5 hover:bg-ctp-mantle/60 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
@@ -420,7 +410,7 @@ function LinksTab({
                     </div>
                     <button
                       onClick={() => onDelete(link._id, link.slug)}
-                      className="text-xs bg-ctp-red/10 text-ctp-red border border-ctp-red/30 hover:bg-ctp-red/20 rounded-lg px-3 py-1.5 transition-colors flex-shrink-0"
+                      className="text-xs text-ctp-red hover:underline transition-colors flex-shrink-0"
                     >
                       Delete
                     </button>
