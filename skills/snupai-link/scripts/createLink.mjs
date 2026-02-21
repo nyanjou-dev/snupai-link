@@ -40,6 +40,22 @@ export async function createShortLink(options) {
     throw new Error("url must be a valid URL");
   }
 
+  // Validate optional fields
+  if (maxClicks !== undefined) {
+    if (typeof maxClicks !== "number" || !Number.isInteger(maxClicks) || maxClicks < 1 || maxClicks > 1_000_000) {
+      throw new Error("maxClicks must be an integer between 1 and 1,000,000");
+    }
+  }
+
+  if (expiresAt !== undefined) {
+    if (typeof expiresAt !== "number" || !Number.isFinite(expiresAt)) {
+      throw new Error("expiresAt must be a Unix timestamp in milliseconds");
+    }
+    if (expiresAt <= Date.now() + 60_000) {
+      throw new Error("expiresAt must be at least 1 minute in the future");
+    }
+  }
+
   try {
     const response = await fetch(API_URL, {
       method: "POST",
@@ -80,15 +96,29 @@ export async function createShortLink(options) {
 
 // CLI interface
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const [slug, url] = process.argv.slice(2);
+  const args = process.argv.slice(2);
+  const flags = {};
+  const positional = [];
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--max-clicks" && args[i + 1]) {
+      flags.maxClicks = parseInt(args[++i], 10);
+    } else if (args[i] === "--expires-at" && args[i + 1]) {
+      flags.expiresAt = parseInt(args[++i], 10);
+    } else {
+      positional.push(args[i]);
+    }
+  }
+
+  const [slug, url] = positional;
 
   if (!slug || !url) {
-    console.error("Usage: node createLink.mjs <slug> <url>");
-    console.error("Example: node createLink.mjs my-link https://example.com");
+    console.error("Usage: node createLink.mjs <slug> <url> [--max-clicks N] [--expires-at TIMESTAMP_MS]");
+    console.error("Example: node createLink.mjs my-link https://example.com --max-clicks 100");
     process.exit(1);
   }
 
-  createShortLink({ slug, url })
+  createShortLink({ slug, url, ...flags })
     .then((result) => {
       console.log(`✓ Short link created: ${result.shortUrl}`);
       console.log(`  Rate limit remaining: ${result.rateLimitRemaining}`);

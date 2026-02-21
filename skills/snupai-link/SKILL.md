@@ -56,6 +56,20 @@ curl -X POST https://snupai.link/api/create \
   }'
 ```
 
+### With optional expiry and click limit
+
+```bash
+curl -X POST https://snupai.link/api/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "apiKey": "snupi_xxxxxxxxxxxx",
+    "slug": "temp-link",
+    "url": "https://example.com/promo",
+    "expiresAt": 1735689600000,
+    "maxClicks": 500
+  }'
+```
+
 ### Response
 
 ```json
@@ -75,8 +89,8 @@ curl -X POST https://snupai.link/api/create \
 | `apiKey` | string | Yes | Your API key from the dashboard |
 | `slug` | string | Yes | Custom slug (alphanumeric, hyphens, underscores only) |
 | `url` | string | Yes | The destination URL to shorten |
-| `maxClicks` | number | No | Optional: Maximum number of clicks allowed |
-| `expiresAt` | number | No | Optional: Expiry timestamp in milliseconds |
+| `maxClicks` | number | No | Max clicks allowed (integer, 1–1,000,000). Link becomes unavailable after limit. |
+| `expiresAt` | number | No | Expiry as Unix timestamp in **milliseconds**. Must be at least 1 minute in the future. |
 
 ## Examples
 
@@ -135,9 +149,10 @@ done < urls.txt
 | HTTP Status | Error | Solution |
 |-------------|-------|----------|
 | 401 | Invalid API key | Check your API key in the dashboard |
-| 400 | Invalid parameters | Verify slug format and URL validity |
+| 400 | Invalid parameters | Verify slug format, URL validity, expiresAt/maxClicks constraints |
+| 403 | Account suspended | Account has been banned by admin |
 | 409 | Slug already exists | Choose a different slug |
-| 429 | Rate limit exceeded | Wait before making more requests |
+| 429 | Rate limit / quota exceeded | Wait before making more requests (burst: 10/5s, quota: per-user/5h) |
 
 ## JavaScript/Node.js Integration
 
@@ -146,9 +161,18 @@ The `scripts/createLink.mjs` file provides a convenient JavaScript wrapper:
 ```javascript
 import { createShortLink } from './scripts/createLink.mjs';
 
+// Basic
 const result = await createShortLink({
   slug: "my-link",
   url: "https://example.com"
+});
+
+// With expiry and click limit
+const result2 = await createShortLink({
+  slug: "promo",
+  url: "https://example.com/sale",
+  maxClicks: 500,
+  expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24h from now
 });
 ```
 
@@ -157,22 +181,33 @@ const result = await createShortLink({
 ```python
 import requests
 import os
+import time
 
-def create_short_link(slug, url):
+def create_short_link(slug, url, *, max_clicks=None, expires_at=None):
+    payload = {
+        "apiKey": os.environ["SNUPAI_API_KEY"],
+        "slug": slug,
+        "url": url,
+    }
+    if max_clicks is not None:
+        payload["maxClicks"] = max_clicks
+    if expires_at is not None:
+        payload["expiresAt"] = expires_at
+
     response = requests.post(
         "https://snupai.link/api/create",
-        json={
-            "apiKey": os.environ["SNUPAI_API_KEY"],
-            "slug": slug,
-            "url": url
-        }
+        json=payload,
     )
     response.raise_for_status()
     return response.json()
 
-# Usage
+# Basic usage
 result = create_short_link("my-link", "https://example.com")
 print(f"Short URL: {result['shortUrl']}")
+
+# With expiry (24h from now) and click limit
+expires = int((time.time() + 86400) * 1000)  # ms timestamp
+result = create_short_link("promo", "https://example.com/sale", max_clicks=100, expires_at=expires)
 ```
 
 ## Tips
