@@ -38,13 +38,45 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate optional expiresAt
+    if (expiresAt !== undefined) {
+      if (typeof expiresAt !== "number" || !Number.isFinite(expiresAt)) {
+        return NextResponse.json(
+          { error: "expiresAt must be a Unix timestamp in milliseconds" },
+          { status: 400 }
+        );
+      }
+      if (expiresAt <= Date.now() + 60_000) {
+        return NextResponse.json(
+          { error: "expiresAt must be at least 1 minute in the future" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate optional maxClicks
+    if (maxClicks !== undefined) {
+      if (typeof maxClicks !== "number" || !Number.isInteger(maxClicks)) {
+        return NextResponse.json(
+          { error: "maxClicks must be an integer" },
+          { status: 400 }
+        );
+      }
+      if (maxClicks < 1 || maxClicks > 1_000_000) {
+        return NextResponse.json(
+          { error: "maxClicks must be between 1 and 1,000,000" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Call Convex mutation
     const result = await fetchMutation(api.api.createLink, {
       apiKey,
       slug,
       url,
-      expiresAt,
-      maxClicks,
+      expiresAt: expiresAt ?? undefined,
+      maxClicks: maxClicks ?? undefined,
     });
 
     return NextResponse.json(result, { status: 200 });

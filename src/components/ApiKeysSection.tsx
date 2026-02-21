@@ -268,9 +268,15 @@ export function ApiKeysSection() {
   -d '{
     "apiKey": "snupi_xxxxxxxxxxxx",
     "slug": "my-link",
-    "url": "https://example.com/very/long/url"
+    "url": "https://example.com/very/long/url",
+    "expiresAt": 1735689600000,
+    "maxClicks": 100
   }'`}
                 </pre>
+              </div>
+              <div className="mt-2 space-y-1 text-xs text-ctp-overlay1">
+                <p><code className="text-ctp-subtext1 font-mono">expiresAt</code> — optional, Unix timestamp in ms, must be at least 1 min in the future</p>
+                <p><code className="text-ctp-subtext1 font-mono">maxClicks</code> — optional, integer between 1 and 1,000,000</p>
               </div>
             </div>
 

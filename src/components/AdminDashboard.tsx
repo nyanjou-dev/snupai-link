@@ -382,45 +382,65 @@ function LinksTab({
       <h2 className="text-lg font-semibold text-ctp-text">
         All Links <span className="text-ctp-overlay0 text-sm font-normal">({links.length})</span>
       </h2>
-      <div className="space-y-6">
+      <div className="space-y-4">
         {groups.map((group) => (
-          <div key={group.userId}>
-            <div className="flex items-center gap-2 pb-2 mb-4">
-              <h3 className="text-sm font-medium text-ctp-subtext1">{group.email}</h3>
-              <span className="text-xs text-ctp-overlay0">
-                ({group.links.length} link{group.links.length !== 1 ? "s" : ""})
-              </span>
-            </div>
-            <div className="space-y-2">
-              {group.links.map((link) => (
-                <div
-                  key={link._id}
-                  className="bg-ctp-mantle/40 rounded-xl p-5 hover:bg-ctp-mantle/60 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-ctp-mauve font-medium truncate">
-                        snupai.link/{link.slug}
-                      </p>
-                      <p className="text-ctp-subtext0 text-sm truncate">{link.url}</p>
-                      <div className="mt-1 flex flex-wrap gap-3 text-xs text-ctp-overlay1">
-                        <span>{link.clickCount} click{link.clickCount !== 1 ? "s" : ""}</span>
-                        <span>Created {formatDateTime(link.createdAt)}</span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => onDelete(link._id, link.slug)}
-                      className="text-xs text-ctp-red hover:underline transition-colors flex-shrink-0"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <LinkGroup key={group.userId} group={group} onDelete={onDelete} />
         ))}
       </div>
+    </div>
+  );
+}
+
+function LinkGroup({
+  group,
+  onDelete,
+}: {
+  group: { email: string; userId: string; links: LinkRow[] };
+  onDelete: (linkId: Id<"links">, slug: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-2 pb-2 mb-2 w-full text-left"
+      >
+        <span className={`text-xs inline-block transition-transform ${expanded ? "rotate-90" : ""}`}>▶</span>
+        <h3 className="text-sm font-medium text-ctp-subtext1">{group.email}</h3>
+        <span className="text-xs text-ctp-overlay0">
+          ({group.links.length} link{group.links.length !== 1 ? "s" : ""})
+        </span>
+      </button>
+      {expanded && (
+        <div className="animate-fade-in space-y-2">
+          {group.links.map((link) => (
+            <div
+              key={link._id}
+              className="bg-ctp-mantle/40 rounded-xl p-5 hover:bg-ctp-mantle/60 transition-colors"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-ctp-mauve font-medium truncate">
+                    snupai.link/{link.slug}
+                  </p>
+                  <p className="text-ctp-subtext0 text-sm truncate">{link.url}</p>
+                  <div className="mt-1 flex flex-wrap gap-3 text-xs text-ctp-overlay1">
+                    <span>{link.clickCount} click{link.clickCount !== 1 ? "s" : ""}</span>
+                    <span>Created {formatDateTime(link.createdAt)}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => onDelete(link._id, link.slug)}
+                  className="text-xs text-ctp-red hover:underline transition-colors flex-shrink-0"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
