@@ -286,7 +286,7 @@ export function ApiKeysSection() {
             <h4 className="font-medium text-ctp-mauve mb-2">Rate Limits</h4>
             <ul className="list-disc list-inside text-ctp-subtext0 space-y-1">
               <li>10 requests per 5 seconds per API key (burst)</li>
-              <li>25 links per 5 hours per account (quota, adjustable by admin)</li>
+              <li>{quota?.limit ?? 25} links per 5 hours per account (quota, adjustable by admin)</li>
               <li>Exceeded limits will return a 429 error</li>
             </ul>
           </div>
