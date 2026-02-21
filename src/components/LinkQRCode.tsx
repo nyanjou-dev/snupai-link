@@ -85,7 +85,7 @@ export function LinkQRCode({ value, slug, size = 128, className = "", showAction
           <button
             onClick={handleDownload}
             disabled={!dataUrl}
-            className="px-3 py-1.5 rounded-md border border-ctp-surface1 text-ctp-subtext1 hover:text-ctp-text hover:border-ctp-subtext0 disabled:opacity-50 transition-colors"
+            className="px-3 py-1.5 rounded-lg border border-ctp-surface1 text-ctp-subtext1 hover:text-ctp-text hover:border-ctp-subtext0 disabled:opacity-50 transition-colors"
           >
             Download PNG
           </button>
@@ -94,14 +94,14 @@ export function LinkQRCode({ value, slug, size = 128, className = "", showAction
             <button
               onClick={handleCopyImage}
               disabled={!dataUrl}
-              className="px-3 py-1.5 rounded-md border border-ctp-surface1 text-ctp-subtext1 hover:text-ctp-text hover:border-ctp-subtext0 disabled:opacity-50 transition-colors"
+              className="px-3 py-1.5 rounded-lg border border-ctp-surface1 text-ctp-subtext1 hover:text-ctp-text hover:border-ctp-subtext0 disabled:opacity-50 transition-colors"
             >
               Copy image
             </button>
           )}
 
-          {copyState === "ok" && <span className="text-green-400">Copied</span>}
-          {copyState === "fail" && <span className="text-red-400">Copy failed</span>}
+          {copyState === "ok" && <span className="text-ctp-green">Copied</span>}
+          {copyState === "fail" && <span className="text-ctp-red">Copy failed</span>}
         </div>
       )}
     </div>

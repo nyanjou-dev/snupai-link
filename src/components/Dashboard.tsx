@@ -6,7 +6,6 @@ import { api } from "../../convex/_generated/api";
 import { useMemo, useState } from "react";
 import { Id } from "../../convex/_generated/dataModel";
 import { ClickDetails } from "./ClickDetails";
-import { LinkQRCode } from "./LinkQRCode";
 import { ApiKeysSection } from "./ApiKeysSection";
 import { formatDateTime, formatExpiry, fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/datetime";
 import Link from "next/link";
@@ -168,12 +167,34 @@ export function Dashboard() {
   return (
     <div className="min-h-screen">
       <header className="border-b border-ctp-surface0">
-        <div className="px-6 py-4 flex items-center justify-between max-w-4xl mx-auto">
+        <div className="px-6 py-3 flex items-center justify-between max-w-4xl mx-auto">
           <h1 className="text-xl font-bold">
             <span className="text-ctp-mauve">snupai</span>
             <span className="text-ctp-subtext1">.link</span>
           </h1>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <nav className="flex items-center gap-1 bg-ctp-mantle rounded-lg p-1">
+              <button
+                onClick={() => setActiveTab("links")}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === "links"
+                    ? "bg-ctp-surface0 text-ctp-mauve"
+                    : "text-ctp-subtext0 hover:text-ctp-text"
+                }`}
+              >
+                Links
+              </button>
+              <button
+                onClick={() => setActiveTab("api-keys")}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === "api-keys"
+                    ? "bg-ctp-surface0 text-ctp-mauve"
+                    : "text-ctp-subtext0 hover:text-ctp-text"
+                }`}
+              >
+                API Keys
+              </button>
+            </nav>
             {me?.role === "admin" && (
               <Link
                 href="/admin"
@@ -190,33 +211,9 @@ export function Dashboard() {
             </button>
           </div>
         </div>
-        <div className="px-6 max-w-4xl mx-auto">
-          <nav className="flex gap-6">
-            <button
-              onClick={() => setActiveTab("links")}
-              className={`py-4 px-1 border-b-2 font-medium transition-colors ${
-                activeTab === "links"
-                  ? "border-ctp-mauve text-ctp-mauve"
-                  : "border-transparent text-ctp-subtext0 hover:text-ctp-subtext1"
-              }`}
-            >
-              Links
-            </button>
-            <button
-              onClick={() => setActiveTab("api-keys")}
-              className={`py-4 px-1 border-b-2 font-medium transition-colors ${
-                activeTab === "api-keys"
-                  ? "border-ctp-mauve text-ctp-mauve"
-                  : "border-transparent text-ctp-subtext0 hover:text-ctp-subtext1"
-              }`}
-            >
-              API Keys
-            </button>
-          </nav>
-        </div>
       </header>
 
-      <div className="max-w-4xl mx-auto p-6 space-y-8">
+      <div className="max-w-4xl mx-auto p-6 space-y-6">
         {activeTab === "api-keys" ? (
           <ApiKeysSection />
         ) : (
@@ -235,7 +232,7 @@ export function Dashboard() {
                 placeholder="auto"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
-                className="bg-transparent px-2 py-3 text-ctp-text placeholder-ctp-overlay0 focus:outline-none w-32"
+                className="bg-transparent px-2 py-2.5 text-ctp-text placeholder-ctp-overlay0 focus:outline-none w-32"
                 pattern="[a-zA-Z0-9_-]+"
                 title="Leave empty for auto-generated slug"
               />
@@ -245,13 +242,13 @@ export function Dashboard() {
               placeholder="https://example.com/long-url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className="flex-1 bg-ctp-base border border-ctp-surface0 rounded-lg px-4 py-3 text-ctp-text placeholder-ctp-overlay0 focus:outline-none focus:border-ctp-mauve transition-colors"
+              className="flex-1 bg-ctp-base border border-ctp-surface0 rounded-lg px-4 py-2.5 text-ctp-text placeholder-ctp-overlay0 focus-ring transition-colors"
               required
             />
             <button
               type="submit"
               disabled={creating || !!formValidationError || !authReady}
-              className="bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 disabled:cursor-not-allowed text-ctp-crust px-6 py-3 rounded-lg font-medium transition-colors whitespace-nowrap"
+              className="bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 disabled:cursor-not-allowed text-ctp-crust px-6 py-2.5 rounded-lg font-medium transition-colors whitespace-nowrap"
             >
               {creating ? "Creating…" : "Shorten"}
             </button>
@@ -266,7 +263,7 @@ export function Dashboard() {
                 value={expiresAtInput}
                 min={toDatetimeLocalValue(Date.now() + MIN_EXPIRY_MS_FROM_NOW)}
                 onChange={(e) => setExpiresAtInput(e.target.value)}
-                className="w-full bg-ctp-base border border-ctp-surface0 rounded-lg px-3 py-2 text-ctp-text focus:outline-none focus:border-ctp-mauve transition-colors"
+                className="w-full bg-ctp-base border border-ctp-surface0 rounded-lg px-3 py-2.5 text-ctp-text focus-ring transition-colors"
               />
               <p className="text-[11px] text-ctp-overlay0">Uses your local timezone ({Intl.DateTimeFormat().resolvedOptions().timeZone}).</p>
             </div>
@@ -282,17 +279,17 @@ export function Dashboard() {
                 placeholder="e.g. 100"
                 value={maxClicksInput}
                 onChange={(e) => setMaxClicksInput(e.target.value)}
-                className="w-full bg-ctp-base border border-ctp-surface0 rounded-lg px-3 py-2 text-ctp-text placeholder-ctp-overlay0 focus:outline-none focus:border-ctp-mauve transition-colors"
+                className="w-full bg-ctp-base border border-ctp-surface0 rounded-lg px-3 py-2.5 text-ctp-text placeholder-ctp-overlay0 focus-ring transition-colors"
               />
               <p className="text-[11px] text-ctp-overlay0">Set between 1 and {MAX_MAX_CLICKS.toLocaleString()}.</p>
             </div>
           </div>
 
           <p className="text-ctp-overlay0 text-xs">Leave slug empty to auto-generate one (usually 3–8 chars).</p>
-          {(error || formValidationError) && <p className="text-red-400 text-sm">{error || formValidationError}</p>}
+          {(error || formValidationError) && <p className="text-ctp-red text-sm">{error || formValidationError}</p>}
         </form>
 
-        <section className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-6 space-y-6">
+        <section className="space-y-6">
           <h2 className="text-lg font-semibold text-ctp-text">Analytics</h2>
           {!analytics ? (
             <div className="text-ctp-subtext0">Loading analytics…</div>
@@ -301,15 +298,15 @@ export function Dashboard() {
               <div>
                 <h3 className="text-sm font-medium text-ctp-subtext1 mb-3">Top links by clicks</h3>
                 {analytics.topLinks.length === 0 ? (
-                  <div className="rounded-lg border border-ctp-surface0 bg-ctp-base p-4 text-sm text-ctp-subtext0">
-                    No links have been clicked yet. Share a short link to start seeing stats.
+                  <div className="rounded-lg border border-ctp-surface0 bg-ctp-mantle p-4 text-center text-sm text-ctp-overlay0">
+                    No links have been clicked yet.
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {analytics.topLinks.map((link) => (
                       <div
                         key={link._id}
-                        className="bg-ctp-base border border-ctp-surface0 rounded-lg p-3 flex items-center justify-between gap-3"
+                        className="bg-ctp-mantle border border-ctp-surface0 rounded-lg p-3 flex items-center justify-between gap-3"
                       >
                         <div className="min-w-0">
                           <p className="text-ctp-mauve truncate">snupai.link/{link.slug}</p>
@@ -325,13 +322,13 @@ export function Dashboard() {
               <div>
                 <h3 className="text-sm font-medium text-ctp-subtext1 mb-3">Recent clicks</h3>
                 {analytics.recentClicks.length === 0 ? (
-                  <div className="rounded-lg border border-ctp-surface0 bg-ctp-base p-4 text-sm text-ctp-subtext0">
-                    Nothing to show yet. New visits will appear here in real time.
+                  <div className="rounded-lg border border-ctp-surface0 bg-ctp-mantle p-4 text-center text-sm text-ctp-overlay0">
+                    Nothing to show yet.
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                     {analytics.recentClicks.map((click) => (
-                      <div key={click._id} className="bg-ctp-base border border-ctp-surface0 rounded-lg p-3">
+                      <div key={click._id} className="bg-ctp-mantle border border-ctp-surface0 rounded-lg p-3">
                         <p className="text-ctp-text text-sm">snupai.link/{click.slug}</p>
                         <p className="text-ctp-overlay1 text-xs">{formatDateTime(click.createdAt)}</p>
                       </div>
@@ -349,15 +346,14 @@ export function Dashboard() {
             <div className="text-ctp-subtext0">Loading...</div>
           ) : links.length === 0 ? (
             <div className="text-ctp-subtext0 bg-ctp-mantle border border-ctp-surface0 rounded-xl p-8 text-center">
-              <p className="text-sm">No links yet.</p>
-              <p className="text-xs text-ctp-overlay0 mt-1">Create your first short link above to get started ✨</p>
+              <p className="text-sm text-ctp-overlay0">No links yet. Create your first short link above.</p>
             </div>
           ) : (
             <div className="space-y-2">
               {links.map((link) => (
                 <div
                   key={link._id}
-                  className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-4 hover:border-ctp-surface1 transition-colors"
+                  className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-4 hover:bg-ctp-mantle/80 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
@@ -370,12 +366,12 @@ export function Dashboard() {
                           snupai.link/{link.slug}
                         </button>
                         {copied === link.slug && (
-                          <span className="text-green-400 text-xs">Copied!</span>
+                          <span className="text-ctp-green text-xs">Copied!</span>
                         )}
                       </div>
                       <p className="text-ctp-subtext0 text-sm truncate">{link.url}</p>
-                      <p className="text-ctp-overlay0 text-xs mt-1">Last clicked: {formatDateTime(link.lastClickedAt)}</p>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                        <span className="text-ctp-overlay0">Last clicked: {formatDateTime(link.lastClickedAt)}</span>
                         <span className="rounded-full border border-ctp-surface0 bg-ctp-base px-2 py-0.5 text-ctp-subtext1">
                           Expires: {formatExpiry(link.expiresAt)}
                         </span>
@@ -385,27 +381,20 @@ export function Dashboard() {
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-4 flex-shrink-0">
-                      <div className="text-center">
-                        <LinkQRCode value={link.url} slug={link.slug} size={72} />
-                        <p className="text-[10px] text-ctp-overlay0 mt-1">Target QR</p>
-                      </div>
-
-                      <div className="flex items-center gap-3 pt-1">
-                        <button
-                          onClick={() => setSelectedLink(selectedLink === link._id ? null : link._id)}
-                          className="text-ctp-subtext1 hover:text-ctp-text text-sm tabular-nums transition-colors"
-                        >
-                          {link.clickCount} click{link.clickCount !== 1 ? "s" : ""}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(link._id)}
-                          className="text-ctp-overlay0 hover:text-red-400 transition-colors"
-                          title="Delete"
-                        >
-                          ×
-                        </button>
-                      </div>
+                    <div className="flex items-center gap-3 flex-shrink-0 pt-1">
+                      <button
+                        onClick={() => setSelectedLink(selectedLink === link._id ? null : link._id)}
+                        className="text-ctp-subtext1 hover:text-ctp-text text-sm tabular-nums transition-colors"
+                      >
+                        {link.clickCount} click{link.clickCount !== 1 ? "s" : ""}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(link._id)}
+                        className="text-ctp-overlay0 hover:text-ctp-red transition-colors"
+                        title="Delete"
+                      >
+                        ×
+                      </button>
                     </div>
                   </div>
                   {selectedLink === link._id && (
@@ -453,7 +442,7 @@ function DashboardQuotaBar({
       : "bg-ctp-mauve";
 
   return (
-    <div className="bg-ctp-mantle border border-ctp-surface0 rounded-xl px-5 py-3 space-y-2">
+    <div className="bg-ctp-mantle border border-ctp-surface0 rounded-lg px-4 py-2.5 space-y-2">
       <div className="flex items-center justify-between text-xs">
         <span className="text-ctp-subtext1">
           <span className={`font-mono font-bold tabular-nums ${isExhausted ? "text-ctp-red" : "text-ctp-text"}`}>

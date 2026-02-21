@@ -57,31 +57,33 @@ export function ClickDetails({
             No clicks recorded yet for this link.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-ctp-subtext0">
-                  <th className="py-2 pr-4 font-medium">Time</th>
-                  <th className="py-2 pr-4 font-medium">Referrer</th>
-                  <th className="py-2 pr-4 font-medium">User agent</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clicks.map((c) => (
-                  <tr key={c._id} className="border-t border-ctp-crust">
-                    <td className="py-2 pr-4 text-ctp-subtext1 whitespace-nowrap">
-                      {formatDateTime(c.createdAt)}
-                    </td>
-                    <td className="py-2 pr-4 text-ctp-subtext1 max-w-[320px] truncate">
-                      {c.referrer || "direct/unknown"}
-                    </td>
-                    <td className="py-2 pr-4 text-ctp-subtext0 max-w-[420px] truncate">
-                      {c.ua || "—"}
-                    </td>
+          <div className="rounded-lg border border-ctp-surface0 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-ctp-subtext0 bg-ctp-base">
+                    <th className="py-2 px-4 font-medium">Time</th>
+                    <th className="py-2 px-4 font-medium">Referrer</th>
+                    <th className="py-2 px-4 font-medium">User agent</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {clicks.map((c, i) => (
+                    <tr key={c._id} className={`border-t border-ctp-surface0 ${i % 2 === 0 ? "bg-ctp-base/50" : ""}`}>
+                      <td className="py-2 px-4 text-ctp-subtext1 whitespace-nowrap">
+                        {formatDateTime(c.createdAt)}
+                      </td>
+                      <td className="py-2 px-4 text-ctp-subtext1 max-w-[320px] truncate">
+                        {c.referrer || "direct/unknown"}
+                      </td>
+                      <td className="py-2 px-4 text-ctp-subtext0 max-w-[420px] truncate">
+                        {c.ua || "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

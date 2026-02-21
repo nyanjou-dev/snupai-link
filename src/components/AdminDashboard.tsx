@@ -86,7 +86,7 @@ export function AdminDashboard() {
   return (
     <div className="min-h-screen">
       <header className="border-b border-ctp-surface0">
-        <div className="px-6 py-4 flex items-center justify-between max-w-5xl mx-auto">
+        <div className="px-6 py-3 flex items-center justify-between max-w-5xl mx-auto">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold">
               <span className="text-ctp-mauve">snupai</span>
@@ -96,7 +96,29 @@ export function AdminDashboard() {
               Admin
             </span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <nav className="flex items-center gap-1 bg-ctp-mantle rounded-lg p-1">
+              <button
+                onClick={() => setActiveTab("users")}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === "users"
+                    ? "bg-ctp-surface0 text-ctp-mauve"
+                    : "text-ctp-subtext0 hover:text-ctp-text"
+                }`}
+              >
+                Users
+              </button>
+              <button
+                onClick={() => setActiveTab("links")}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === "links"
+                    ? "bg-ctp-surface0 text-ctp-mauve"
+                    : "text-ctp-subtext0 hover:text-ctp-text"
+                }`}
+              >
+                Links
+              </button>
+            </nav>
             <Link
               href="/dashboard"
               className="text-ctp-subtext0 hover:text-ctp-subtext1 text-sm transition-colors"
@@ -111,35 +133,11 @@ export function AdminDashboard() {
             </button>
           </div>
         </div>
-        <div className="px-6 max-w-5xl mx-auto">
-          <nav className="flex gap-6">
-            <button
-              onClick={() => setActiveTab("users")}
-              className={`py-4 px-1 border-b-2 font-medium transition-colors ${
-                activeTab === "users"
-                  ? "border-ctp-mauve text-ctp-mauve"
-                  : "border-transparent text-ctp-subtext0 hover:text-ctp-subtext1"
-              }`}
-            >
-              Users
-            </button>
-            <button
-              onClick={() => setActiveTab("links")}
-              className={`py-4 px-1 border-b-2 font-medium transition-colors ${
-                activeTab === "links"
-                  ? "border-ctp-mauve text-ctp-mauve"
-                  : "border-transparent text-ctp-subtext0 hover:text-ctp-subtext1"
-              }`}
-            >
-              Links
-            </button>
-          </nav>
-        </div>
       </header>
 
       <div className="max-w-5xl mx-auto p-6 space-y-6">
         {error && (
-          <div className="rounded-lg border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-400">
+          <div className="rounded-lg border border-ctp-red/30 bg-ctp-red/10 px-4 py-3 text-sm text-ctp-red">
             {error}
           </div>
         )}
@@ -245,7 +243,7 @@ function UserCard({
   };
 
   return (
-    <div className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-4 hover:border-ctp-surface1 transition-colors">
+    <div className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-4 hover:bg-ctp-mantle/80 transition-colors">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -253,21 +251,21 @@ function UserCard({
               {user.email ?? "No email"}
             </span>
             {isAdmin && (
-              <span className="text-[10px] font-semibold bg-ctp-mauve/20 text-ctp-mauve border border-ctp-mauve/30 rounded-full px-2 py-0.5">
+              <span className="text-xs font-semibold bg-ctp-mauve/20 text-ctp-mauve border border-ctp-mauve/30 rounded-full px-2 py-0.5">
                 Admin
               </span>
             )}
             {user.banned && (
-              <span className="text-[10px] font-semibold bg-ctp-red/20 text-ctp-red border border-ctp-red/30 rounded-full px-2 py-0.5">
+              <span className="text-xs font-semibold bg-ctp-red/20 text-ctp-red border border-ctp-red/30 rounded-full px-2 py-0.5">
                 Banned
               </span>
             )}
             {user.emailVerified ? (
-              <span className="text-[10px] font-semibold bg-ctp-green/20 text-ctp-green border border-ctp-green/30 rounded-full px-2 py-0.5">
+              <span className="text-xs font-semibold bg-ctp-green/20 text-ctp-green border border-ctp-green/30 rounded-full px-2 py-0.5">
                 Verified
               </span>
             ) : (
-              <span className="text-[10px] font-semibold bg-ctp-yellow/20 text-ctp-yellow border border-ctp-yellow/30 rounded-full px-2 py-0.5">
+              <span className="text-xs font-semibold bg-ctp-yellow/20 text-ctp-yellow border border-ctp-yellow/30 rounded-full px-2 py-0.5">
                 Unverified
               </span>
             )}
@@ -290,8 +288,8 @@ function UserCard({
                     if (e.key === "Enter") handleQuotaSave();
                     if (e.key === "Escape") setEditingQuota(false);
                   }}
-                  className="w-16 bg-ctp-base border border-ctp-surface1 rounded px-1.5 py-0.5 text-xs text-ctp-text focus:outline-none focus:border-ctp-mauve"
-                  placeholder="20"
+                  className="w-16 bg-transparent border-b border-ctp-surface1 px-1 py-0.5 text-xs text-ctp-text focus:outline-none focus:border-ctp-mauve"
+                  placeholder="25"
                   autoFocus
                 />
                 <button
@@ -397,7 +395,7 @@ function LinksTab({
       <div className="space-y-6">
         {groups.map((group) => (
           <div key={group.userId}>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 border-b border-ctp-surface0 pb-2 mb-3">
               <h3 className="text-sm font-medium text-ctp-subtext1">{group.email}</h3>
               <span className="text-xs text-ctp-overlay0">
                 ({group.links.length} link{group.links.length !== 1 ? "s" : ""})
@@ -407,7 +405,7 @@ function LinksTab({
               {group.links.map((link) => (
                 <div
                   key={link._id}
-                  className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-4 hover:border-ctp-surface1 transition-colors"
+                  className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-4 hover:bg-ctp-mantle/80 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">

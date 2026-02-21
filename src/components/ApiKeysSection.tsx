@@ -156,10 +156,10 @@ export function ApiKeysSection() {
       {quota && <QuotaBar quota={quota} />}
 
       {/* Create new API key form */}
-      <form onSubmit={handleCreate} className="bg-ctp-surface0 rounded-lg p-4">
+      <form onSubmit={handleCreate} className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-4">
         <h3 className="font-semibold mb-3">Create new API key</h3>
         {error && (
-          <div className="mb-3 p-3 bg-ctp-red/20 border border-ctp-red text-ctp-red rounded text-sm">
+          <div className="mb-3 p-3 bg-ctp-red/10 border border-ctp-red/30 text-ctp-red rounded-lg text-sm">
             {error}
           </div>
         )}
@@ -169,14 +169,14 @@ export function ApiKeysSection() {
             value={newKeyName}
             onChange={(e) => setNewKeyName(e.target.value)}
             placeholder="Key name (e.g., 'My App', 'Production')"
-            className="flex-1 px-3 py-2 bg-ctp-base border border-ctp-surface1 rounded focus:outline-none focus:border-ctp-mauve"
+            className="flex-1 px-3 py-2.5 bg-ctp-base border border-ctp-surface0 rounded-lg focus-ring"
             disabled={creating}
             required
           />
           <button
             type="submit"
             disabled={creating || !newKeyName.trim()}
-            className="px-4 py-2 bg-ctp-mauve hover:bg-ctp-mauve/80 disabled:opacity-50 disabled:cursor-not-allowed rounded font-medium transition-colors"
+            className="px-4 py-2.5 bg-ctp-mauve hover:bg-ctp-mauve/90 disabled:opacity-50 disabled:cursor-not-allowed text-ctp-crust rounded-lg font-medium transition-colors"
           >
             {creating ? "Creating..." : "Create Key"}
           </button>
@@ -185,20 +185,20 @@ export function ApiKeysSection() {
 
       {/* Show created key */}
       {showNewKey && createdKey && (
-        <div className="bg-ctp-green/20 border border-ctp-green text-ctp-text rounded-lg p-4">
-          <h3 className="font-semibold mb-2">🔑 API Key Created!</h3>
+        <div className="bg-ctp-green/10 border border-ctp-green/30 text-ctp-text rounded-xl p-4">
+          <h3 className="font-semibold mb-2">API Key Created!</h3>
           <p className="text-sm text-ctp-subtext0 mb-3">
-            Copy this key now. You won't be able to see it again.
+            Copy this key now. You won&apos;t be able to see it again.
           </p>
           <div className="flex gap-2">
-            <code className="flex-1 px-3 py-2 bg-ctp-base rounded text-sm font-mono break-all">
+            <code className="flex-1 px-3 py-2 bg-ctp-base rounded-lg text-sm font-mono break-all">
               {createdKey}
             </code>
             <button
               onClick={handleCopy}
-              className="px-4 py-2 bg-ctp-green hover:bg-ctp-green/80 rounded font-medium transition-colors"
+              className="px-4 py-2 bg-ctp-green hover:bg-ctp-green/80 text-ctp-crust rounded-lg font-medium transition-colors"
             >
-              {copied ? "✓ Copied!" : "Copy"}
+              {copied ? "Copied!" : "Copy"}
             </button>
           </div>
           <button
@@ -214,22 +214,22 @@ export function ApiKeysSection() {
       )}
 
       {/* API keys list */}
-      <div className="bg-ctp-surface0 rounded-lg">
+      <div className="bg-ctp-mantle border border-ctp-surface0 rounded-xl">
         {apiKeys && apiKeys.length > 0 ? (
-          <div className="divide-y divide-ctp-surface1">
+          <div className="divide-y divide-ctp-surface0">
             {apiKeys.map((key) => (
               <div key={key.id} className="p-4 flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
                     <h4 className="font-medium">{key.name}</h4>
                     {!key.isActive && (
-                      <span className="px-2 py-0.5 bg-ctp-red/20 text-ctp-red text-xs rounded">
+                      <span className="px-2 py-0.5 bg-ctp-red/20 text-ctp-red text-xs rounded-full">
                         Inactive
                       </span>
                     )}
                   </div>
                   <div className="text-sm text-ctp-subtext0 mt-1">
-                    <code className="bg-ctp-base px-2 py-0.5 rounded">
+                    <code className="bg-ctp-base px-2 py-0.5 rounded-lg">
                       {key.identifier}
                     </code>
                   </div>
@@ -245,7 +245,7 @@ export function ApiKeysSection() {
                 </div>
                 <button
                   onClick={() => handleDelete(key.id)}
-                  className="px-3 py-1.5 text-sm text-ctp-red hover:bg-ctp-red/20 rounded transition-colors"
+                  className="px-3 py-1.5 text-sm text-ctp-red hover:bg-ctp-red/10 rounded-lg transition-colors"
                 >
                   Delete
                 </button>
@@ -253,23 +253,23 @@ export function ApiKeysSection() {
             ))}
           </div>
         ) : (
-          <div className="p-8 text-center text-ctp-subtext0">
-            <p className="mb-2">No API keys yet</p>
+          <div className="p-8 text-center text-ctp-overlay0">
+            <p className="mb-1">No API keys yet</p>
             <p className="text-sm">Create your first API key to get started</p>
           </div>
         )}
       </div>
 
       {/* API Documentation */}
-      <div className="bg-ctp-surface0 rounded-lg p-6">
-        <h3 className="font-semibold mb-3">📚 API Documentation</h3>
+      <div className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-6">
+        <h3 className="font-semibold mb-3">API Documentation</h3>
         <div className="space-y-4 text-sm">
           <div>
             <h4 className="font-medium text-ctp-mauve mb-2">Create a Shortlink</h4>
             <p className="text-ctp-subtext0 mb-2">
               Use your API key to create shortlinks programmatically.
             </p>
-            <div className="bg-ctp-base rounded p-3 overflow-x-auto">
+            <div className="bg-ctp-base rounded-lg p-4 overflow-x-auto">
               <pre className="text-xs font-mono">
 {`curl -X POST https://snupai.link/api/create \\
   -H "Content-Type: application/json" \\
@@ -293,7 +293,7 @@ export function ApiKeysSection() {
 
           <div>
             <h4 className="font-medium text-ctp-mauve mb-2">Response</h4>
-            <div className="bg-ctp-base rounded p-3">
+            <div className="bg-ctp-base rounded-lg p-4">
               <pre className="text-xs font-mono">
 {`{
   "id": "...",
