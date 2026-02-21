@@ -41,6 +41,7 @@ export const listUsers = query({
           bannedAt: user.bannedAt ?? null,
           emailVerified: user.emailVerificationTime != null,
           linkCount: links.length,
+          apiQuotaLimit: user.apiQuotaLimit ?? null,
           createdAt: user._creationTime,
         };
       }),
@@ -152,6 +153,28 @@ export const forceLogoutUser = mutation({
     if (!target) throw new Error("User not found");
 
     await deleteSessionsForUser(ctx, args.userId);
+  },
+});
+
+export const setUserQuota = mutation({
+  args: {
+    userId: v.id("users"),
+    limit: v.union(v.number(), v.null()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const target = await ctx.db.get(args.userId);
+    if (!target) throw new Error("User not found");
+
+    if (args.limit !== null) {
+      if (!Number.isInteger(args.limit) || args.limit < 1 || args.limit > 10000) {
+        throw new Error("Quota must be an integer between 1 and 10,000");
+      }
+    }
+
+    await ctx.db.patch(args.userId, {
+      apiQuotaLimit: args.limit ?? undefined,
+    });
   },
 });
 

@@ -19,7 +19,7 @@ const RATE_LIMIT_MAX_REQUESTS = 10;
 
 // Link creation quota (per user via API)
 const QUOTA_WINDOW_MS = 5 * 60 * 60 * 1000; // 5 hours
-const QUOTA_MAX_LINKS = 20;
+const QUOTA_DEFAULT_LINKS = 25;
 
 async function checkRateLimit(
   ctx: any,
@@ -97,7 +97,8 @@ export const createLink = mutation({
       );
     }
 
-    // Check link creation quota (20 per 5 hours per user)
+    // Check link creation quota per user
+    const userQuotaLimit = user.apiQuotaLimit ?? QUOTA_DEFAULT_LINKS;
     const now = Date.now();
     const quotaWindowStart = now - QUOTA_WINDOW_MS;
     const recentLinks = await ctx.db
@@ -106,9 +107,9 @@ export const createLink = mutation({
       .filter((q) => q.gt(q.field("createdAt"), quotaWindowStart))
       .collect();
 
-    if (recentLinks.length >= QUOTA_MAX_LINKS) {
+    if (recentLinks.length >= userQuotaLimit) {
       throw new Error(
-        `Quota exceeded. Maximum ${QUOTA_MAX_LINKS} links per ${QUOTA_WINDOW_MS / (60 * 60 * 1000)} hours via API.`
+        `Quota exceeded. Maximum ${userQuotaLimit} links per ${QUOTA_WINDOW_MS / (60 * 60 * 1000)} hours via API.`
       );
     }
 
@@ -185,6 +186,9 @@ export const quotaStatus = query({
     const userId = await getAuthUserId(ctx);
     if (!userId) return null;
 
+    const user = await ctx.db.get(userId);
+    const limit = user?.apiQuotaLimit ?? QUOTA_DEFAULT_LINKS;
+
     const now = Date.now();
     const windowStart = now - QUOTA_WINDOW_MS;
 
@@ -195,7 +199,6 @@ export const quotaStatus = query({
       .collect();
 
     const used = recentLinks.length;
-    // The earliest link's createdAt + window = when one slot frees up
     const oldestInWindow = recentLinks.reduce(
       (min, l) => (l.createdAt < min ? l.createdAt : min),
       Infinity,
@@ -204,8 +207,8 @@ export const quotaStatus = query({
 
     return {
       used,
-      limit: QUOTA_MAX_LINKS,
-      remaining: Math.max(0, QUOTA_MAX_LINKS - used),
+      limit,
+      remaining: Math.max(0, limit - used),
       resetsAt,
       windowMs: QUOTA_WINDOW_MS,
     };

@@ -20,6 +20,7 @@ export function AdminDashboard() {
   const deleteUser = useMutation(api.admin.deleteUser);
   const forceLogout = useMutation(api.admin.forceLogoutUser);
   const deleteLink = useMutation(api.admin.deleteLink);
+  const setUserQuota = useMutation(api.admin.setUserQuota);
 
   const [activeTab, setActiveTab] = useState<Tab>("users");
   const [error, setError] = useState("");
@@ -60,6 +61,15 @@ export function AdminDashboard() {
       await forceLogout({ userId });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to force logout");
+    }
+  };
+
+  const handleSetQuota = async (userId: Id<"users">, limit: number | null) => {
+    setError("");
+    try {
+      await setUserQuota({ userId, limit });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to set quota");
     }
   };
 
@@ -141,6 +151,7 @@ export function AdminDashboard() {
             onUnban={handleUnban}
             onDelete={handleDelete}
             onForceLogout={handleForceLogout}
+            onSetQuota={handleSetQuota}
           />
         ) : (
           <LinksTab links={links} onDelete={handleDeleteLink} />
@@ -158,12 +169,14 @@ function UsersTab({
   onUnban,
   onDelete,
   onForceLogout,
+  onSetQuota,
 }: {
   users: UserRow[] | undefined;
   onBan: (userId: Id<"users">, email: string | null) => void;
   onUnban: (userId: Id<"users">) => void;
   onDelete: (userId: Id<"users">, email: string | null) => void;
   onForceLogout: (userId: Id<"users">, email: string | null) => void;
+  onSetQuota: (userId: Id<"users">, limit: number | null) => void;
 }) {
   if (!users) {
     return <div className="text-ctp-subtext0">Loading users...</div>;
@@ -179,81 +192,167 @@ function UsersTab({
         All Users <span className="text-ctp-overlay0 text-sm font-normal">({users.length})</span>
       </h2>
       <div className="space-y-2">
-        {users.map((user) => {
-          const isAdmin = user.role === "admin";
-          return (
-            <div
-              key={user._id}
-              className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-4 hover:border-ctp-surface1 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-ctp-text font-medium truncate">
-                      {user.email ?? "No email"}
-                    </span>
-                    {isAdmin && (
-                      <span className="text-[10px] font-semibold bg-ctp-mauve/20 text-ctp-mauve border border-ctp-mauve/30 rounded-full px-2 py-0.5">
-                        Admin
-                      </span>
-                    )}
-                    {user.banned && (
-                      <span className="text-[10px] font-semibold bg-ctp-red/20 text-ctp-red border border-ctp-red/30 rounded-full px-2 py-0.5">
-                        Banned
-                      </span>
-                    )}
-                    {user.emailVerified ? (
-                      <span className="text-[10px] font-semibold bg-ctp-green/20 text-ctp-green border border-ctp-green/30 rounded-full px-2 py-0.5">
-                        Verified
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-semibold bg-ctp-yellow/20 text-ctp-yellow border border-ctp-yellow/30 rounded-full px-2 py-0.5">
-                        Unverified
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-1 flex flex-wrap gap-3 text-xs text-ctp-overlay1">
-                    <span>{user.linkCount} link{user.linkCount !== 1 ? "s" : ""}</span>
-                    <span>Joined {formatDateTime(user.createdAt)}</span>
-                    {user.bannedAt && <span>Banned {formatDateTime(user.bannedAt)}</span>}
-                  </div>
-                </div>
+        {users.map((user) => (
+          <UserCard
+            key={user._id}
+            user={user}
+            onBan={onBan}
+            onUnban={onUnban}
+            onDelete={onDelete}
+            onForceLogout={onForceLogout}
+            onSetQuota={onSetQuota}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
-                {!isAdmin && (
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {user.banned ? (
-                      <button
-                        onClick={() => onUnban(user._id)}
-                        className="text-xs bg-ctp-green/10 text-ctp-green border border-ctp-green/30 hover:bg-ctp-green/20 rounded-lg px-3 py-1.5 transition-colors"
-                      >
-                        Unban
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => onBan(user._id, user.email)}
-                        className="text-xs bg-ctp-peach/10 text-ctp-peach border border-ctp-peach/30 hover:bg-ctp-peach/20 rounded-lg px-3 py-1.5 transition-colors"
-                      >
-                        Ban
-                      </button>
-                    )}
-                    <button
-                      onClick={() => onForceLogout(user._id, user.email)}
-                      className="text-xs bg-ctp-yellow/10 text-ctp-yellow border border-ctp-yellow/30 hover:bg-ctp-yellow/20 rounded-lg px-3 py-1.5 transition-colors"
-                    >
-                      Logout
-                    </button>
-                    <button
-                      onClick={() => onDelete(user._id, user.email)}
-                      className="text-xs bg-ctp-red/10 text-ctp-red border border-ctp-red/30 hover:bg-ctp-red/20 rounded-lg px-3 py-1.5 transition-colors"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
+function UserCard({
+  user,
+  onBan,
+  onUnban,
+  onDelete,
+  onForceLogout,
+  onSetQuota,
+}: {
+  user: UserRow;
+  onBan: (userId: Id<"users">, email: string | null) => void;
+  onUnban: (userId: Id<"users">) => void;
+  onDelete: (userId: Id<"users">, email: string | null) => void;
+  onForceLogout: (userId: Id<"users">, email: string | null) => void;
+  onSetQuota: (userId: Id<"users">, limit: number | null) => void;
+}) {
+  const isAdmin = user.role === "admin";
+  const [editingQuota, setEditingQuota] = useState(false);
+  const [quotaInput, setQuotaInput] = useState(
+    user.apiQuotaLimit != null ? String(user.apiQuotaLimit) : "",
+  );
+
+  const currentQuota = user.apiQuotaLimit ?? 25;
+
+  const handleQuotaSave = () => {
+    const trimmed = quotaInput.trim();
+    if (trimmed === "" || trimmed === "25") {
+      onSetQuota(user._id, null); // reset to default
+    } else {
+      const parsed = parseInt(trimmed, 10);
+      if (!Number.isNaN(parsed) && parsed >= 1 && parsed <= 10000) {
+        onSetQuota(user._id, parsed);
+      }
+    }
+    setEditingQuota(false);
+  };
+
+  return (
+    <div className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-4 hover:border-ctp-surface1 transition-colors">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-ctp-text font-medium truncate">
+              {user.email ?? "No email"}
+            </span>
+            {isAdmin && (
+              <span className="text-[10px] font-semibold bg-ctp-mauve/20 text-ctp-mauve border border-ctp-mauve/30 rounded-full px-2 py-0.5">
+                Admin
+              </span>
+            )}
+            {user.banned && (
+              <span className="text-[10px] font-semibold bg-ctp-red/20 text-ctp-red border border-ctp-red/30 rounded-full px-2 py-0.5">
+                Banned
+              </span>
+            )}
+            {user.emailVerified ? (
+              <span className="text-[10px] font-semibold bg-ctp-green/20 text-ctp-green border border-ctp-green/30 rounded-full px-2 py-0.5">
+                Verified
+              </span>
+            ) : (
+              <span className="text-[10px] font-semibold bg-ctp-yellow/20 text-ctp-yellow border border-ctp-yellow/30 rounded-full px-2 py-0.5">
+                Unverified
+              </span>
+            )}
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-ctp-overlay1">
+            <span>{user.linkCount} link{user.linkCount !== 1 ? "s" : ""}</span>
+            <span>Joined {formatDateTime(user.createdAt)}</span>
+            {user.bannedAt && <span>Banned {formatDateTime(user.bannedAt)}</span>}
+            <span className="text-ctp-overlay0">|</span>
+            {editingQuota ? (
+              <span className="flex items-center gap-1">
+                <span className="text-ctp-subtext0">Quota:</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={10000}
+                  value={quotaInput}
+                  onChange={(e) => setQuotaInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleQuotaSave();
+                    if (e.key === "Escape") setEditingQuota(false);
+                  }}
+                  className="w-16 bg-ctp-base border border-ctp-surface1 rounded px-1.5 py-0.5 text-xs text-ctp-text focus:outline-none focus:border-ctp-mauve"
+                  placeholder="20"
+                  autoFocus
+                />
+                <button
+                  onClick={handleQuotaSave}
+                  className="text-ctp-green hover:text-ctp-green/80"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => setEditingQuota(false)}
+                  className="text-ctp-overlay0 hover:text-ctp-subtext0"
+                >
+                  Cancel
+                </button>
+              </span>
+            ) : (
+              <button
+                onClick={() => {
+                  setQuotaInput(user.apiQuotaLimit != null ? String(user.apiQuotaLimit) : "");
+                  setEditingQuota(true);
+                }}
+                className="text-ctp-subtext0 hover:text-ctp-mauve transition-colors"
+                title="Click to edit API quota"
+              >
+                Quota: {currentQuota}/5h
+              </button>
+            )}
+          </div>
+        </div>
+
+        {!isAdmin && (
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {user.banned ? (
+              <button
+                onClick={() => onUnban(user._id)}
+                className="text-xs bg-ctp-green/10 text-ctp-green border border-ctp-green/30 hover:bg-ctp-green/20 rounded-lg px-3 py-1.5 transition-colors"
+              >
+                Unban
+              </button>
+            ) : (
+              <button
+                onClick={() => onBan(user._id, user.email)}
+                className="text-xs bg-ctp-peach/10 text-ctp-peach border border-ctp-peach/30 hover:bg-ctp-peach/20 rounded-lg px-3 py-1.5 transition-colors"
+              >
+                Ban
+              </button>
+            )}
+            <button
+              onClick={() => onForceLogout(user._id, user.email)}
+              className="text-xs bg-ctp-yellow/10 text-ctp-yellow border border-ctp-yellow/30 hover:bg-ctp-yellow/20 rounded-lg px-3 py-1.5 transition-colors"
+            >
+              Logout
+            </button>
+            <button
+              onClick={() => onDelete(user._id, user.email)}
+              className="text-xs bg-ctp-red/10 text-ctp-red border border-ctp-red/30 hover:bg-ctp-red/20 rounded-lg px-3 py-1.5 transition-colors"
+            >
+              Delete
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Id } from "../../convex/_generated/dataModel";
 
 interface ApiKey {
@@ -20,6 +20,80 @@ function formatTimeRemaining(ms: number) {
   const minutes = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000));
   if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes}m`;
+}
+
+type QuotaData = NonNullable<ReturnType<typeof useQuery<typeof api.api.quotaStatus>>>;
+
+function QuotaBar({ quota }: { quota: QuotaData }) {
+  const [now, setNow] = useState(Date.now());
+  const pct = Math.min(100, (quota.used / quota.limit) * 100);
+  const isNearLimit = quota.remaining <= 3 && quota.remaining > 0;
+  const isExhausted = quota.remaining === 0;
+
+  // Tick every 30s so the countdown stays fresh
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const barColor = isExhausted
+    ? "bg-ctp-red"
+    : isNearLimit
+      ? "bg-ctp-peach"
+      : "bg-ctp-mauve";
+
+  const glowColor = isExhausted
+    ? "shadow-ctp-red/40"
+    : isNearLimit
+      ? "shadow-ctp-peach/30"
+      : "shadow-ctp-mauve/20";
+
+  return (
+    <div className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-5 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-ctp-text">Link Quota</h3>
+        <span className="text-xs text-ctp-overlay1">
+          {quota.windowMs / (60 * 60 * 1000)}h rolling window
+        </span>
+      </div>
+
+      {/* Bar */}
+      <div className="relative">
+        <div className="h-3 bg-ctp-surface0 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-500 ease-out ${barColor} ${pct > 0 ? `shadow-md ${glowColor}` : ""}`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        {/* Tick marks */}
+        <div className="absolute inset-0 flex justify-between px-[1px] pointer-events-none">
+          {Array.from({ length: 5 }, (_, i) => (
+            <div key={i} className="w-px h-3 bg-ctp-overlay0/20" />
+          ))}
+        </div>
+      </div>
+
+      {/* Stats row */}
+      <div className="flex items-center justify-between text-xs">
+        <div className="flex items-center gap-3">
+          <span className="text-ctp-subtext1">
+            <span className={`font-mono font-bold tabular-nums ${isExhausted ? "text-ctp-red" : "text-ctp-text"}`}>
+              {quota.used}
+            </span>
+            <span className="text-ctp-overlay1"> / {quota.limit} used</span>
+          </span>
+          <span className={`font-mono tabular-nums font-semibold ${isExhausted ? "text-ctp-red" : isNearLimit ? "text-ctp-peach" : "text-ctp-green"}`}>
+            {quota.remaining} left
+          </span>
+        </div>
+        {quota.resetsAt && (
+          <span className="text-ctp-overlay1">
+            Next slot in {formatTimeRemaining(quota.resetsAt - now)}
+          </span>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export function ApiKeysSection() {
@@ -79,32 +153,7 @@ export function ApiKeysSection() {
       </div>
 
       {/* Quota status */}
-      {quota && (
-        <div className="bg-ctp-mantle border border-ctp-surface0 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-medium text-ctp-subtext1">API Quota</h3>
-              <p className="text-xs text-ctp-overlay1 mt-0.5">
-                {quota.used} / {quota.limit} links used
-                {quota.resetsAt && (
-                  <span>
-                    {" · "}Resets in {formatTimeRemaining(quota.resetsAt - Date.now())}
-                  </span>
-                )}
-              </p>
-            </div>
-            <span className={`text-sm font-mono tabular-nums ${quota.remaining === 0 ? "text-ctp-red" : "text-ctp-green"}`}>
-              {quota.remaining} remaining
-            </span>
-          </div>
-          <div className="mt-2 h-1.5 bg-ctp-surface0 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all ${quota.remaining === 0 ? "bg-ctp-red" : "bg-ctp-mauve"}`}
-              style={{ width: `${(quota.used / quota.limit) * 100}%` }}
-            />
-          </div>
-        </div>
-      )}
+      {quota && <QuotaBar quota={quota} />}
 
       {/* Create new API key form */}
       <form onSubmit={handleCreate} className="bg-ctp-surface0 rounded-lg p-4">
@@ -237,7 +286,7 @@ export function ApiKeysSection() {
             <h4 className="font-medium text-ctp-mauve mb-2">Rate Limits</h4>
             <ul className="list-disc list-inside text-ctp-subtext0 space-y-1">
               <li>10 requests per 5 seconds per API key (burst)</li>
-              <li>20 links per 5 hours per account (quota)</li>
+              <li>25 links per 5 hours per account (quota, adjustable by admin)</li>
               <li>Exceeded limits will return a 429 error</li>
             </ul>
           </div>

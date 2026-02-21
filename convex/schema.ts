@@ -11,6 +11,7 @@ export default defineSchema({
     role: v.optional(v.string()),
     banned: v.optional(v.boolean()),
     bannedAt: v.optional(v.number()),
+    apiQuotaLimit: v.optional(v.number()),
   }).index("email", ["email"]).index("phone", ["phone"]),
   links: defineTable({
     slug: v.string(),

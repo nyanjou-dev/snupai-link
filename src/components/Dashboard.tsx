@@ -25,6 +25,7 @@ function getErrorMessage(err: unknown) {
 export function Dashboard() {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const me = useQuery(api.session.me, isAuthenticated ? {} : "skip");
+  const quota = useQuery(api.api.quotaStatus, isAuthenticated ? {} : "skip");
   const links = useQuery(api.links.list, isAuthenticated ? {} : "skip");
   const analytics = useQuery(
     api.links.analyticsOverview,
@@ -220,6 +221,9 @@ export function Dashboard() {
           <ApiKeysSection />
         ) : (
           <>
+        {quota && (
+          <DashboardQuotaBar used={quota.used} limit={quota.limit} remaining={quota.remaining} resetsAt={quota.resetsAt} />
+        )}
         <form onSubmit={handleCreate} className="bg-ctp-mantle border border-ctp-surface0 rounded-xl p-6 space-y-4">
           <h2 className="text-lg font-semibold text-ctp-text">Create Short Link</h2>
 
@@ -414,6 +418,62 @@ export function Dashboard() {
         </div>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+function formatTimeRemaining(ms: number) {
+  if (ms <= 0) return "now";
+  const hours = Math.floor(ms / (60 * 60 * 1000));
+  const minutes = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000));
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
+function DashboardQuotaBar({
+  used,
+  limit,
+  remaining,
+  resetsAt,
+}: {
+  used: number;
+  limit: number;
+  remaining: number;
+  resetsAt: number | null;
+}) {
+  const pct = Math.min(100, (used / limit) * 100);
+  const isNearLimit = remaining <= 3 && remaining > 0;
+  const isExhausted = remaining === 0;
+
+  const barColor = isExhausted
+    ? "bg-ctp-red"
+    : isNearLimit
+      ? "bg-ctp-peach"
+      : "bg-ctp-mauve";
+
+  return (
+    <div className="bg-ctp-mantle border border-ctp-surface0 rounded-xl px-5 py-3 space-y-2">
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-ctp-subtext1">
+          <span className={`font-mono font-bold tabular-nums ${isExhausted ? "text-ctp-red" : "text-ctp-text"}`}>
+            {used}
+          </span>
+          <span className="text-ctp-overlay1"> / {limit} links this window</span>
+        </span>
+        <span className="text-ctp-overlay1">
+          {isExhausted
+            ? resetsAt
+              ? `Next slot in ${formatTimeRemaining(resetsAt - Date.now())}`
+              : "Quota full"
+            : `${remaining} remaining`}
+        </span>
+      </div>
+      <div className="h-2 bg-ctp-surface0 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ease-out ${barColor}`}
+          style={{ width: `${pct}%` }}
+        />
       </div>
     </div>
   );

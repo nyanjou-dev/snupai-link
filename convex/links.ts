@@ -11,6 +11,8 @@ const MIN_MAX_CLICKS = 1;
 const MAX_MAX_CLICKS = 1_000_000;
 const MIN_EXPIRY_MS_FROM_NOW = 60_000; // 1 minute
 const MAX_EXPIRY_MS_FROM_NOW = 5 * 365 * 24 * 60 * 60 * 1000; // 5 years
+const QUOTA_WINDOW_MS = 5 * 60 * 60 * 1000; // 5 hours
+const QUOTA_DEFAULT_LINKS = 25;
 
 function randomSlug(length = 6) {
   let out = "";
@@ -54,6 +56,18 @@ export const create = mutation({
 
     const user = await ctx.db.get(userId);
     if (user?.banned) throw new Error("Account suspended");
+
+    // Enforce link creation quota
+    const quotaLimit = user?.apiQuotaLimit ?? QUOTA_DEFAULT_LINKS;
+    const quotaWindowStart = Date.now() - QUOTA_WINDOW_MS;
+    const recentLinks = await ctx.db
+      .query("links")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .filter((q) => q.gt(q.field("createdAt"), quotaWindowStart))
+      .collect();
+    if (recentLinks.length >= quotaLimit) {
+      throw new Error(`Quota exceeded. You can create up to ${quotaLimit} links per 5 hours.`);
+    }
 
     let normalizedUrl: string;
     try {
