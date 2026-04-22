@@ -199,15 +199,6 @@ export const remove = mutation({
       await ctx.db.delete(click._id);
     }
 
-    // Delete associated legacy clicks while table still exists.
-    const legacyClicks = await ctx.db
-      .query("clicks")
-      .withIndex("by_link", (q) => q.eq("linkId", args.id))
-      .collect();
-    for (const click of legacyClicks) {
-      await ctx.db.delete(click._id);
-    }
-
     await ctx.db.delete(args.id);
   },
 });
@@ -227,7 +218,7 @@ export const getBySlug = query({
       url: link.url,
       expiresAt: link.expiresAt,
       maxClicks: link.maxClicks,
-      clickCount: link.clickCount ?? link.clicks ?? 0,
+      clickCount: link.clickCount ?? 0,
     };
   },
 });
@@ -250,7 +241,7 @@ export const trackClick = mutation({
     if (owner?.banned) return { ok: false as const, reason: "suspended" as const };
 
     const now = Date.now();
-    const currentCount = link.clickCount ?? link.clicks ?? 0;
+    const currentCount = link.clickCount ?? 0;
 
     if (typeof link.expiresAt === "number" && now > link.expiresAt) {
       return { ok: false as const, reason: "expired" as const };
@@ -323,29 +314,11 @@ export const getClicks = query({
     const link = await ctx.db.get(args.linkId);
     if (!link || link.userId !== userId) return [];
 
-    const events = await ctx.db
+    return await ctx.db
       .query("clickEvents")
       .withIndex("by_link", (q) => q.eq("linkId", args.linkId))
       .order("desc")
       .take(100);
-
-    if (events.length > 0) return events;
-
-    // Backward-compatible read fallback for data created before clickEvents existed.
-    const legacy = await ctx.db
-      .query("clicks")
-      .withIndex("by_link", (q) => q.eq("linkId", args.linkId))
-      .order("desc")
-      .take(100);
-
-    return legacy.map((c) => ({
-      _id: c._id,
-      _creationTime: c._creationTime,
-      linkId: c.linkId,
-      createdAt: c.timestamp,
-      referrer: c.referrer,
-      ua: c.userAgent,
-    }));
   },
 });
 
@@ -369,21 +342,9 @@ export const topReferrersForLink = query({
       .withIndex("by_link", (q) => q.eq("linkId", args.linkId))
       .collect();
 
-    if (events.length > 0) {
-      for (const event of events) {
-        const domain = normalizeReferrerDomain(event.referrer);
-        counts.set(domain, (counts.get(domain) ?? 0) + 1);
-      }
-    } else {
-      const legacy = await ctx.db
-        .query("clicks")
-        .withIndex("by_link", (q) => q.eq("linkId", args.linkId))
-        .collect();
-
-      for (const event of legacy) {
-        const domain = normalizeReferrerDomain(event.referrer);
-        counts.set(domain, (counts.get(domain) ?? 0) + 1);
-      }
+    for (const event of events) {
+      const domain = normalizeReferrerDomain(event.referrer);
+      counts.set(domain, (counts.get(domain) ?? 0) + 1);
     }
 
     return [...counts.entries()]
@@ -416,13 +377,13 @@ export const analyticsOverview = query({
       .collect();
 
     const topLinks = [...links]
-      .sort((a, b) => (b.clickCount ?? b.clicks ?? 0) - (a.clickCount ?? a.clicks ?? 0))
+      .sort((a, b) => (b.clickCount ?? 0) - (a.clickCount ?? 0))
       .slice(0, topLimit)
       .map((link) => ({
         _id: link._id,
         slug: link.slug,
         url: link.url,
-        clickCount: link.clickCount ?? link.clicks ?? 0,
+        clickCount: link.clickCount ?? 0,
         lastClickedAt: link.lastClickedAt,
       }));
 
@@ -434,32 +395,15 @@ export const analyticsOverview = query({
           .order("desc")
           .take(recentLimit);
 
-        if (events.length > 0) {
-          return events.map((event) => ({
-            _id: event._id,
-            linkId: link._id,
-            slug: link.slug,
-            createdAt: event.createdAt,
-            referrer: event.referrer,
-            ua: event.ua,
-          }));
-        }
-
-        const legacy = await ctx.db
-          .query("clicks")
-          .withIndex("by_link", (q) => q.eq("linkId", link._id))
-          .order("desc")
-          .take(recentLimit);
-
-        return legacy.map((event) => ({
+        return events.map((event) => ({
           _id: event._id,
           linkId: link._id,
           slug: link.slug,
-          createdAt: event.timestamp,
+          createdAt: event.createdAt,
           referrer: event.referrer,
-          ua: event.userAgent,
+          ua: event.ua,
         }));
-      })
+      }),
     );
 
     const recentClicks = recentFromEvents
@@ -497,7 +441,7 @@ export const backfillLinkStats = mutation({
       } = {};
 
       if (typeof link.clickCount !== "number") {
-        patch.clickCount = link.clicks ?? 0;
+        patch.clickCount = 0;
       }
 
       if (typeof link.lastClickedAt !== "number") {
@@ -509,13 +453,6 @@ export const backfillLinkStats = mutation({
 
         if (latestEvent) {
           patch.lastClickedAt = latestEvent.createdAt;
-        } else {
-          const latestLegacy = await ctx.db
-            .query("clicks")
-            .withIndex("by_link", (q) => q.eq("linkId", link._id))
-            .order("desc")
-            .first();
-          if (latestLegacy) patch.lastClickedAt = latestLegacy.timestamp;
         }
       }
 

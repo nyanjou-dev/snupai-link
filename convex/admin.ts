@@ -66,7 +66,7 @@ export const listAllLinks = query({
           url: link.url,
           userId: link.userId,
           ownerEmail: owner?.email ?? "unknown",
-          clickCount: link.clickCount ?? link.clicks ?? 0,
+          clickCount: link.clickCount ?? 0,
           createdAt: link.createdAt,
         };
       }),
@@ -130,14 +130,6 @@ export const deleteLink = mutation({
       .withIndex("by_link", (q) => q.eq("linkId", args.linkId))
       .collect();
     for (const click of clickEvents) {
-      await ctx.db.delete(click._id);
-    }
-
-    const legacyClicks = await ctx.db
-      .query("clicks")
-      .withIndex("by_link", (q) => q.eq("linkId", args.linkId))
-      .collect();
-    for (const click of legacyClicks) {
       await ctx.db.delete(click._id);
     }
 
@@ -212,18 +204,10 @@ async function deleteUserData(ctx: MutationCtx, userId: Id<"users">, deleteAccou
       await ctx.db.delete(click._id);
     }
 
-    const legacyClicks = await ctx.db
-      .query("clicks")
-      .withIndex("by_link", (q) => q.eq("linkId", link._id))
-      .collect();
-    for (const click of legacyClicks) {
-      await ctx.db.delete(click._id);
-    }
-
     await ctx.db.delete(link._id);
   }
 
-  // Delete API keys + rate limits
+  // Delete API keys + their generic-bucket rate-limit rows.
   const apiKeys = await ctx.db
     .query("apiKeys")
     .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -231,7 +215,9 @@ async function deleteUserData(ctx: MutationCtx, userId: Id<"users">, deleteAccou
   for (const key of apiKeys) {
     const rateLimits = await ctx.db
       .query("rateLimit")
-      .withIndex("by_key_and_time", (q) => q.eq("apiKeyId", key._id))
+      .withIndex("by_kind_key_time", (q) =>
+        q.eq("kind", "api:burst").eq("key", key._id as string),
+      )
       .collect();
     for (const rl of rateLimits) {
       await ctx.db.delete(rl._id);

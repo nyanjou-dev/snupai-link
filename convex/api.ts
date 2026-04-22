@@ -1,13 +1,9 @@
 import { v } from "convex/values";
 import { mutation, query, MutationCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { Doc, Id } from "./_generated/dataModel";
-import {
-  constantTimeEqual,
-  keyLookupHex,
-  legacyDjb2,
-  sha256Hex,
-} from "./apiKeyHash";
+import { Doc } from "./_generated/dataModel";
+import { constantTimeEqual, keyLookupHex, sha256Hex } from "./apiKeyHash";
+import { consumeRateLimit } from "./rateLimitLib";
 
 // Rate limit configuration (burst)
 const RATE_LIMIT_WINDOW = 5000; // 5 seconds
@@ -17,72 +13,18 @@ const RATE_LIMIT_MAX_REQUESTS = 10;
 const QUOTA_WINDOW_MS = 5 * 60 * 60 * 1000; // 5 hours
 const QUOTA_DEFAULT_LINKS = 25;
 
-async function checkRateLimit(
-  ctx: MutationCtx,
-  apiKeyId: Id<"apiKeys">,
-): Promise<{ allowed: boolean; remaining: number }> {
-  const now = Date.now();
-  const windowStart = now - RATE_LIMIT_WINDOW;
-
-  const recentRequests = await ctx.db
-    .query("rateLimit")
-    .withIndex("by_key_and_time", (q) =>
-      q.eq("apiKeyId", apiKeyId).gt("timestamp", windowStart),
-    )
-    .collect();
-
-  if (recentRequests.length >= RATE_LIMIT_MAX_REQUESTS) {
-    return { allowed: false, remaining: 0 };
-  }
-
-  await ctx.db.insert("rateLimit", {
-    apiKeyId,
-    timestamp: now,
-  });
-
-  for (const entry of recentRequests) {
-    if (entry.timestamp < windowStart) {
-      await ctx.db.delete(entry._id);
-    }
-  }
-
-  return {
-    allowed: true,
-    remaining: RATE_LIMIT_MAX_REQUESTS - recentRequests.length - 1,
-  };
-}
-
 async function findApiKey(
   ctx: MutationCtx,
   rawKey: string,
 ): Promise<Doc<"apiKeys"> | null> {
-  // Preferred path: peppered HMAC lookup + SHA-256 constant-time compare.
-  try {
-    const lookup = await keyLookupHex(rawKey);
-    const candidate = await ctx.db
-      .query("apiKeys")
-      .withIndex("by_lookup", (q) => q.eq("keyLookup", lookup))
-      .first();
-    if (candidate) {
-      const stored = candidate.key;
-      const fresh = await sha256Hex(rawKey);
-      if (constantTimeEqual(stored, fresh)) return candidate;
-    }
-  } catch {
-    // API_KEY_PEPPER may be missing during first deploy; fall through to
-    // legacy path so deploy order isn't strict.
-  }
-
-  // Legacy fallback: DJB2 hash for pre-migration rows. Insecure by design;
-  // removed once invalidateAllLegacyKeys has run.
-  const legacyHash = legacyDjb2(rawKey);
-  const legacy = await ctx.db
+  const lookup = await keyLookupHex(rawKey);
+  const candidate = await ctx.db
     .query("apiKeys")
-    .withIndex("by_key", (q) => q.eq("key", legacyHash))
+    .withIndex("by_lookup", (q) => q.eq("keyLookup", lookup))
     .first();
-  if (legacy && legacy.key.startsWith("hash_")) return legacy;
-
-  return null;
+  if (!candidate) return null;
+  const fresh = await sha256Hex(rawKey);
+  return constantTimeEqual(candidate.key, fresh) ? candidate : null;
 }
 
 export const createLink = mutation({
@@ -105,11 +47,16 @@ export const createLink = mutation({
       throw new Error("Account suspended");
     }
 
-    // Check rate limit (burst)
-    const rateLimit = await checkRateLimit(ctx, key._id);
+    // Per-API-key burst rate limit via the generic rate limiter.
+    const rateLimit = await consumeRateLimit(ctx, {
+      kind: "api:burst",
+      key: key._id as string,
+      windowMs: RATE_LIMIT_WINDOW,
+      max: RATE_LIMIT_MAX_REQUESTS,
+    });
     if (!rateLimit.allowed) {
       throw new Error(
-        `Rate limit exceeded. Maximum ${RATE_LIMIT_MAX_REQUESTS} requests per ${RATE_LIMIT_WINDOW / 1000} seconds.`
+        `Rate limit exceeded. Maximum ${RATE_LIMIT_MAX_REQUESTS} requests per ${RATE_LIMIT_WINDOW / 1000} seconds.`,
       );
     }
 

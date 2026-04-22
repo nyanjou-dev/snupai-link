@@ -4,8 +4,6 @@
 // - `sha256Hex` hashes the raw key for storage and verification compare.
 // - `keyLookupHex` computes HMAC-SHA256(key, API_KEY_PEPPER) for indexed O(1)
 //   lookup without exposing an unsalted-digest oracle on the public surface.
-// - `legacyDjb2` replicates the broken pre-migration hash so legacy rows can
-//   still authenticate during the transition window. Removed after invalidation.
 // - `constantTimeEqual` compares two equal-length strings without early exit.
 
 const encoder = new TextEncoder();
@@ -45,17 +43,6 @@ export async function keyLookupHex(input: string): Promise<string> {
   );
   const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(input));
   return bufferToHex(sig);
-}
-
-// Legacy 32-bit DJB2-style hash — insecure, forgeable. Retained only to let
-// pre-migration keys authenticate until the invalidation mutation runs.
-export function legacyDjb2(input: string): string {
-  let hash = 0;
-  for (let i = 0; i < input.length; i++) {
-    hash = (hash << 5) - hash + input.charCodeAt(i);
-    hash = hash & hash;
-  }
-  return `hash_${Math.abs(hash).toString(16)}`;
 }
 
 export function constantTimeEqual(a: string, b: string): boolean {
