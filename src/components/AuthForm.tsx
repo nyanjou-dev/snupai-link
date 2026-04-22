@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useConvexAuth, useQuery } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -29,6 +29,7 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
   const { signIn } = useAuthActions();
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const authDiagnostics = useQuery(api.session.authDiagnostics);
+  const requestOtp = useMutation(api.otpThrottle.requestOtp);
   const router = useRouter();
 
   const allowSignup = process.env.NEXT_PUBLIC_ALLOW_SIGNUP !== "false";
@@ -57,15 +58,8 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
     setNextPath(next);
   }, []);
 
-  useEffect(() => {
-    if (!authDiagnostics) return;
-    console.info("[auth] diagnostics", {
-      convexSite: authDiagnostics.convexSite,
-      configuredAuthDomain: authDiagnostics.configuredAuthDomain,
-      authDomainMatchesConvexSite: authDiagnostics.authDomainMatchesConvexSite,
-      hasSiteUrlOverride: authDiagnostics.hasSiteUrlOverride,
-    });
-  }, [authDiagnostics]);
+  // authDiagnostics is admin-only; non-admin callers receive null. The
+  // dashboard Admin panel is the right place to surface this data.
 
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
@@ -120,9 +114,10 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
     setError("");
     setLoading(true);
     try {
+      await requestOtp({ email, purpose: "verify" });
       await signIn("password", { email, password, flow });
-    } catch {
-      // Expected - resend triggers the verification flow again
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -134,6 +129,7 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
     setLoading(true);
 
     try {
+      await requestOtp({ email, purpose: "reset" });
       await signIn("password", { email, flow: "reset" });
       setStep("reset-verification");
     } catch (err: unknown) {
@@ -166,6 +162,7 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
     setError("");
     setLoading(true);
     try {
+      await requestOtp({ email, purpose: "reset" });
       await signIn("password", { email, flow: "reset" });
     } catch (err: unknown) {
       setError(getErrorMessage(err));
@@ -330,7 +327,11 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
               onChange={(e) => setNewPassword(e.target.value)}
               className={inputClasses}
               required
+              minLength={12}
             />
+            <p className="text-[11px] text-ctp-overlay0 -mt-2">
+              12+ characters, letters and numbers.
+            </p>
             {error && <p className="text-ctp-red/90 text-sm">{error}</p>}
             <button
               type="submit"
@@ -414,7 +415,13 @@ export function AuthForm({ onBack }: { onBack?: () => void }) {
             onChange={(e) => setPassword(e.target.value)}
             className={inputClasses}
             required
+            minLength={12}
           />
+          {flow === "signUp" && (
+            <p className="text-[11px] text-ctp-overlay0 -mt-2">
+              12+ characters, letters and numbers.
+            </p>
+          )}
           {error && <p className="text-ctp-red/90 text-sm">{error}</p>}
           <button
             type="submit"

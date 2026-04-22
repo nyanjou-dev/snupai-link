@@ -1,10 +1,11 @@
 import { NextRequest } from "next/server";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../convex/_generated/api";
+import { escapeHtml } from "@/lib/escape-html";
+import { fetchOgMeta } from "@/lib/og-fetch";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
-// List of social media crawler user agents
 const SOCIAL_CRAWLERS = [
   "twitterbot",
   "facebookexternalhit",
@@ -23,9 +24,14 @@ function isSocialCrawler(userAgent: string | null): boolean {
   return SOCIAL_CRAWLERS.some((crawler) => ua.includes(crawler));
 }
 
+// Route-specific strict CSP. The crawler-preview HTML only needs a meta
+// refresh + icon link; no script execution anywhere.
+const STRICT_CSP =
+  "default-src 'none'; img-src https:; style-src 'unsafe-inline'; script-src 'none'; base-uri 'none'; form-action 'none'";
+
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
 
@@ -38,18 +44,29 @@ export async function GET(
 
   const referrer = req.headers.get("referer") ?? undefined;
   const userAgent = req.headers.get("user-agent") ?? undefined;
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    undefined;
 
   const result = await client.mutation(api.links.trackClick, {
     slug,
     referrer,
     userAgent,
+    ip,
   });
 
   if (!result.ok) {
     if (result.reason === "not_found") {
       return new Response("Not found", { status: 404 });
     }
-
+    if (result.reason === "rate_limited") {
+      const retryAfter = Math.ceil((result.retryAfterMs ?? 60_000) / 1000);
+      return new Response("Too many requests", {
+        status: 429,
+        headers: { "Retry-After": String(retryAfter) },
+      });
+    }
     const reasonMap: Record<string, string> = {
       max_clicks: "max-clicks",
       expired: "expired",
@@ -61,110 +78,56 @@ export async function GET(
   }
 
   const targetUrl = result.url;
-  const siteUrl = process.env.SITE_URL || "https://snupai.link";
-  const fullUrl = `${siteUrl}/${slug}`;
 
-  // If it's a social media crawler, return HTML with OG tags
-  if (isSocialCrawler(userAgent ?? null)) {
-    let ogMetaTags = "";
-    let pageTitle = slug;
+  if (!isSocialCrawler(userAgent ?? null)) {
+    return Response.redirect(targetUrl, 302);
+  }
 
-    try {
-      const targetResponse = await fetch(targetUrl, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; snupai-link-bot/1.0)",
-        },
-      });
-      if (targetResponse.ok) {
-        const html = await targetResponse.text();
+  // Crawler branch: extract OG tags via the SSRF-hardened fetcher and serve
+  // a minimal HTML response. Every interpolated value is HTML-escaped; the
+  // response is served under a strict per-route CSP that forbids scripts.
+  const og = await fetchOgMeta(targetUrl);
 
-        // Extract Open Graph meta tags
-        const ogProperties = [
-          "og:title",
-          "og:description",
-          "og:image",
-          "og:url",
-          "og:type",
-          "og:site_name",
-          "og:video",
-          "og:video:url",
-          "og:video:secure_url",
-          "og:video:type",
-          "og:video:width",
-          "og:video:height",
-          "twitter:card",
-          "twitter:site",
-          "twitter:title",
-          "twitter:description",
-          "twitter:image",
-          "twitter:player",
-          "twitter:player:width",
-          "twitter:player:height",
-        ];
+  const ogMetaLines: string[] = [];
+  let pageTitle = slug;
 
-        for (const prop of ogProperties) {
-          const regex = new RegExp(
-            `<meta[^>]+property=["']${prop}["'][^>]+content=["']([^"']+)["']`,
-            "i"
-          );
-          const match = html.match(regex);
-          if (match && match[1]) {
-            ogMetaTags += `  <meta property="${prop}" content="${match[1]}">\n`;
-            if (prop === "og:title" && pageTitle === slug) {
-              pageTitle = match[1];
-            }
-          }
-
-          // Also check for twitter:name format
-          const twitterRegex = new RegExp(
-            `<meta[^>]+name=["']${prop}["'][^>]+content=["']([^"']+)["']`,
-            "i"
-          );
-          const twitterMatch = html.match(twitterRegex);
-          if (twitterMatch && twitterMatch[1] && !match) {
-            ogMetaTags += `  <meta name="${prop}" content="${twitterMatch[1]}">\n`;
-          }
-        }
-
-        // Extract title if we don't have og:title
-        if (!ogMetaTags.includes("og:title")) {
-          const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-          if (titleMatch && titleMatch[1]) {
-            pageTitle = titleMatch[1];
-            ogMetaTags = `  <meta property="og:title" content="${titleMatch[1]}">\n` + ogMetaTags;
-          }
-        }
+  if (og) {
+    for (const p of og.properties) {
+      const attr = p.kind === "property" ? "property" : "name";
+      ogMetaLines.push(
+        `  <meta ${attr}="${escapeHtml(p.key)}" content="${escapeHtml(p.value)}">`,
+      );
+      if (p.kind === "property" && p.key === "og:title" && pageTitle === slug) {
+        pageTitle = p.value;
       }
-    } catch (error) {
-      // If fetching fails, continue without meta tags
-      console.error("Failed to fetch destination meta tags:", error);
     }
+    if (og.title && pageTitle === slug) pageTitle = og.title;
+  }
 
-    // Return HTML with Open Graph meta tags and meta redirect
-    return new Response(
-      `
-<!DOCTYPE html>
+  const escapedTitle = escapeHtml(pageTitle);
+  const escapedRefresh = escapeHtml(targetUrl);
+
+  const body = `<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0;url=${targetUrl}">
-  <link rel="icon" type="image/svg+xml" href="/icon.svg">
-  <title>${pageTitle}</title>
-
-${ogMetaTags}
+<meta charset="UTF-8">
+<meta name="robots" content="noindex,nofollow">
+<meta http-equiv="refresh" content="0;url=${escapedRefresh}">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<title>${escapedTitle}</title>
+${ogMetaLines.join("\n")}
 </head>
 <body>
 </body>
 </html>
-  `,
-      {
-        headers: {
-          "Content-Type": "text/html; charset=utf-8",
-        },
-      }
-    );
-  }
+`;
 
-  // Normal browser visit - just redirect
-  return Response.redirect(targetUrl, 302);
+  return new Response(body, {
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Content-Security-Policy": STRICT_CSP,
+      "X-Content-Type-Options": "nosniff",
+      "Referrer-Policy": "no-referrer",
+    },
+  });
 }

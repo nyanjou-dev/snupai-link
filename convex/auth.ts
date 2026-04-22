@@ -6,7 +6,17 @@ const ResendOTP = Email({
   id: "resend-otp",
   maxAge: 15 * 60,
   generateVerificationToken() {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    // Uniform 6-digit code in [100000, 999999] via CSPRNG + rejection sampling
+    // (modulo bias on raw 2^32 values across a 900k range is small but avoidable).
+    const range = 900000;
+    const limit = Math.floor(0xffffffff / range) * range;
+    const buf = new Uint32Array(1);
+    let r: number;
+    do {
+      crypto.getRandomValues(buf);
+      r = buf[0];
+    } while (r >= limit);
+    return (100000 + (r % range)).toString();
   },
   async sendVerificationRequest({ identifier, token }: { identifier: string; token: string }) {
     const apiKey = process.env.RESEND_API_KEY;
@@ -44,11 +54,21 @@ const ResendOTP = Email({
   },
 });
 
+function validatePasswordRequirements(password: string) {
+  if (password.length < 12) {
+    throw new Error("Password must be at least 12 characters.");
+  }
+  if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+    throw new Error("Password must include both letters and numbers.");
+  }
+}
+
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
     Password({
       verify: ResendOTP,
       reset: ResendOTP,
+      validatePasswordRequirements,
     }),
   ],
 });

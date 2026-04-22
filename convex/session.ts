@@ -1,5 +1,6 @@
 import { query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { requireAdmin } from "./admin";
 
 function safeOrigin(value: string | undefined) {
   if (!value) return null;
@@ -15,7 +16,7 @@ export const me = query({
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return null;
-    
+
     // Try to get user from users table
     const user = await ctx.db.get(userId);
     if (!user) {
@@ -23,7 +24,7 @@ export const me = query({
       // Return null so the client can call store to create it
       return null;
     }
-    
+
     return {
       userId,
       email: user?.email ?? null,
@@ -34,9 +35,17 @@ export const me = query({
   },
 });
 
+// Deployment-config introspection. Admin-only: leaks deployment topology
+// otherwise. Non-admin callers receive `null`.
 export const authDiagnostics = query({
   args: {},
-  handler: async () => {
+  handler: async (ctx) => {
+    try {
+      await requireAdmin(ctx);
+    } catch {
+      return null;
+    }
+
     const convexSite = safeOrigin(process.env.CONVEX_SITE_URL);
     const customAuthSite = safeOrigin(process.env.CUSTOM_AUTH_SITE_URL);
     const configuredAuthDomain = customAuthSite ?? convexSite;

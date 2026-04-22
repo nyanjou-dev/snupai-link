@@ -1,17 +1,13 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, MutationCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-
-// Simple hash function for API keys (must match apiKeys.ts)
-function hashApiKey(key: string): string {
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) {
-    const char = key.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return `hash_${Math.abs(hash).toString(16)}`;
-}
+import { Doc, Id } from "./_generated/dataModel";
+import {
+  constantTimeEqual,
+  keyLookupHex,
+  legacyDjb2,
+  sha256Hex,
+} from "./apiKeyHash";
 
 // Rate limit configuration (burst)
 const RATE_LIMIT_WINDOW = 5000; // 5 seconds
@@ -22,19 +18,16 @@ const QUOTA_WINDOW_MS = 5 * 60 * 60 * 1000; // 5 hours
 const QUOTA_DEFAULT_LINKS = 25;
 
 async function checkRateLimit(
-  ctx: any,
-  apiKeyId: any
+  ctx: MutationCtx,
+  apiKeyId: Id<"apiKeys">,
 ): Promise<{ allowed: boolean; remaining: number }> {
   const now = Date.now();
   const windowStart = now - RATE_LIMIT_WINDOW;
 
-  // Count requests in the current window
   const recentRequests = await ctx.db
     .query("rateLimit")
-    .withIndex("by_key_and_time", (q: any) =>
-      q
-        .eq("apiKeyId", apiKeyId)
-        .gt("timestamp", windowStart)
+    .withIndex("by_key_and_time", (q) =>
+      q.eq("apiKeyId", apiKeyId).gt("timestamp", windowStart),
     )
     .collect();
 
@@ -42,13 +35,11 @@ async function checkRateLimit(
     return { allowed: false, remaining: 0 };
   }
 
-  // Record this request
   await ctx.db.insert("rateLimit", {
     apiKeyId,
     timestamp: now,
   });
 
-  // Clean up old entries
   for (const entry of recentRequests) {
     if (entry.timestamp < windowStart) {
       await ctx.db.delete(entry._id);
@@ -61,6 +52,39 @@ async function checkRateLimit(
   };
 }
 
+async function findApiKey(
+  ctx: MutationCtx,
+  rawKey: string,
+): Promise<Doc<"apiKeys"> | null> {
+  // Preferred path: peppered HMAC lookup + SHA-256 constant-time compare.
+  try {
+    const lookup = await keyLookupHex(rawKey);
+    const candidate = await ctx.db
+      .query("apiKeys")
+      .withIndex("by_lookup", (q) => q.eq("keyLookup", lookup))
+      .first();
+    if (candidate) {
+      const stored = candidate.key;
+      const fresh = await sha256Hex(rawKey);
+      if (constantTimeEqual(stored, fresh)) return candidate;
+    }
+  } catch {
+    // API_KEY_PEPPER may be missing during first deploy; fall through to
+    // legacy path so deploy order isn't strict.
+  }
+
+  // Legacy fallback: DJB2 hash for pre-migration rows. Insecure by design;
+  // removed once invalidateAllLegacyKeys has run.
+  const legacyHash = legacyDjb2(rawKey);
+  const legacy = await ctx.db
+    .query("apiKeys")
+    .withIndex("by_key", (q) => q.eq("key", legacyHash))
+    .first();
+  if (legacy && legacy.key.startsWith("hash_")) return legacy;
+
+  return null;
+}
+
 export const createLink = mutation({
   args: {
     apiKey: v.string(),
@@ -70,15 +94,7 @@ export const createLink = mutation({
     maxClicks: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const hashedKey = hashApiKey(args.apiKey);
-
-    // Find API key
-    const keys = await ctx.db
-      .query("apiKeys")
-      .withIndex("by_key", (q) => q.eq("key", hashedKey))
-      .collect();
-
-    const key = keys[0];
+    const key = await findApiKey(ctx, args.apiKey);
     if (!key || !key.isActive) {
       throw new Error("Invalid API key");
     }
@@ -152,30 +168,6 @@ export const createLink = mutation({
       url: args.url,
       shortUrl: `${process.env.SITE_URL || "https://snupai.link"}/${args.slug}`,
       rateLimitRemaining: rateLimit.remaining,
-    };
-  },
-});
-
-export const validateKey = query({
-  args: {
-    apiKey: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const hashedKey = hashApiKey(args.apiKey);
-
-    const keys = await ctx.db
-      .query("apiKeys")
-      .withIndex("by_key", (q) => q.eq("key", hashedKey))
-      .collect();
-
-    const key = keys[0];
-    if (!key || !key.isActive) {
-      return { valid: false };
-    }
-
-    return {
-      valid: true,
-      name: key.name,
     };
   },
 });

@@ -17,7 +17,7 @@
  *   - VERCEL_ENV: "production", "preview", or "development" (auto-set by Vercel)
  */
 
-const { execSync } = require("child_process");
+const { execFileSync } = require("child_process");
 
 function getSiteUrl() {
   // Vercel provides VERCEL_URL automatically (without https://)
@@ -48,11 +48,13 @@ function setConvexEnvVar(name, value) {
     process.env.VERCEL_ENV === "production" ||
     process.env.CONVEX_DEPLOYMENT?.startsWith("prod:");
 
-  const deploymentFlag = isProd ? "--prod" : "";
-  const command = `printf '%s' "${value}" | bunx convex env set ${name} ${deploymentFlag}`;
+  // execFileSync avoids spawning a shell, so `value` cannot be interpreted
+  // as shell syntax regardless of its content.
+  const args = ["convex", "env", "set", name, value];
+  if (isProd) args.push("--prod");
 
   try {
-    execSync(command, { stdio: "inherit" });
+    execFileSync("bunx", args, { stdio: "inherit" });
     console.log(`✓ Set ${name}=${value}`);
   } catch (error) {
     console.error(`✗ Failed to set ${name}:`, error.message);

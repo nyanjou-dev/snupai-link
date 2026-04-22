@@ -43,17 +43,35 @@ export default defineSchema({
   }).index("by_link", ["linkId"]),
   apiKeys: defineTable({
     userId: v.id("users"),
-    key: v.string(), // hashed API key
+    // SHA-256 hex of the raw key, prefixed "sha256_". Legacy rows carry a
+    // broken DJB2 hash prefixed "hash_" and will be invalidated in a follow-up.
+    key: v.string(),
+    // HMAC-SHA256(key, API_KEY_PEPPER) hex. Secondary index for O(1) lookup
+    // without leaking an unsalted-digest oracle. Optional because legacy rows
+    // do not have it.
+    keyLookup: v.optional(v.string()),
     prefix: v.optional(v.string()), // visible prefix e.g. "snupi_h6Mm..."
     name: v.string(), // user-friendly name for the key
     createdAt: v.number(),
     lastUsedAt: v.optional(v.number()),
     isActive: v.boolean(),
+    // Set when the hard invalidation of legacy keys runs.
+    legacyInvalidatedAt: v.optional(v.number()),
   })
     .index("by_user", ["userId"])
-    .index("by_key", ["key"]),
+    .index("by_key", ["key"])
+    .index("by_lookup", ["keyLookup"]),
   rateLimit: defineTable({
-    apiKeyId: v.id("apiKeys"),
-    timestamp: v.number(), // for TTL cleanup
-  }).index("by_key_and_time", ["apiKeyId", "timestamp"]),
+    // Legacy per-API-key rate limiter. Kept for back-compat with existing
+    // `api.ts` checkRateLimit; removed once callers migrate to kind/key.
+    apiKeyId: v.optional(v.id("apiKeys")),
+    // Generalized sliding-window rate limiter. `kind` namespaces the bucket
+    // (e.g. "redirect:ip", "redirect:slug", "otp:email"); `key` is the per-
+    // bucket identifier.
+    kind: v.optional(v.string()),
+    key: v.optional(v.string()),
+    timestamp: v.number(),
+  })
+    .index("by_key_and_time", ["apiKeyId", "timestamp"])
+    .index("by_kind_key_time", ["kind", "key", "timestamp"]),
 });

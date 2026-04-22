@@ -11,6 +11,7 @@ interface ApiKey {
   createdAt: number;
   lastUsedAt: number | null;
   isActive: boolean;
+  legacyInvalidatedAt: number | null;
   identifier: string;
 }
 
@@ -200,6 +201,21 @@ export function ApiKeysSection() {
         </div>
       )}
 
+      {/* Legacy-key rotation notice */}
+      {apiKeys?.some((k) => k.legacyInvalidatedAt != null) && (
+        <div className="bg-ctp-red/10 border border-ctp-red/30 rounded-xl p-4 text-sm">
+          <p className="font-medium text-ctp-red mb-1">
+            API keys rotated for security
+          </p>
+          <p className="text-ctp-subtext1">
+            Keys issued before the security update were stored with a weak hash
+            and have been invalidated. Delete any key marked{" "}
+            <span className="text-ctp-red">Rotated</span> below and create a new
+            one.
+          </p>
+        </div>
+      )}
+
       {/* API keys list */}
       <div className="bg-ctp-mantle/40 rounded-xl">
         {apiKeys && apiKeys.length > 0 ? (
@@ -209,9 +225,16 @@ export function ApiKeysSection() {
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
                     <h4 className="font-medium">{key.name}</h4>
-                    {!key.isActive && (
+                    {key.legacyInvalidatedAt != null ? (
+                      <span
+                        className="text-xs text-ctp-red"
+                        title={`Rotated for security on ${new Date(key.legacyInvalidatedAt).toLocaleDateString()}`}
+                      >
+                        Rotated
+                      </span>
+                    ) : !key.isActive ? (
                       <span className="text-xs text-ctp-red">Inactive</span>
-                    )}
+                    ) : null}
                   </div>
                   <div className="text-sm mt-1">
                     <span className="text-ctp-overlay1 font-mono text-xs">

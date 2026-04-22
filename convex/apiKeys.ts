@@ -1,28 +1,18 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { keyLookupHex, sha256Hex } from "./apiKeyHash";
 
-// Generate a random API key
+// Generate a random API key using a CSPRNG (Web Crypto).
+// 24 random bytes → 32-char base64url body → "snupi_" + body (38 chars total).
+// 192 bits of entropy; Math.random is not acceptable for key material.
 function generateApiKey(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  const prefix = "snupi_";
-  const keyLength = 32;
-  let key = prefix;
-  for (let i = 0; i < keyLength; i++) {
-    key += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return key;
-}
-
-// Simple hash function for API keys (for demonstration - use bcrypt in production)
-function hashApiKey(key: string): string {
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) {
-    const char = key.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  return `hash_${Math.abs(hash).toString(16)}`;
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  const body = btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return `snupi_${body}`;
 }
 
 export const create = mutation({
@@ -35,17 +25,25 @@ export const create = mutation({
       throw new Error("Not authenticated");
     }
 
-    // Generate API key
-    const apiKey = generateApiKey();
-    const hashedKey = hashApiKey(apiKey);
+    const trimmedName = args.name.trim();
+    if (trimmedName.length === 0) {
+      throw new Error("Key name is required");
+    }
+    if (trimmedName.length > 64) {
+      throw new Error("Key name must be 64 characters or fewer");
+    }
 
-    // Store in database
+    const apiKey = generateApiKey();
+    const hashedKey = await sha256Hex(apiKey);
+    const keyLookup = await keyLookupHex(apiKey);
+
     const prefix = apiKey.slice(0, 12) + "...";
     const keyId = await ctx.db.insert("apiKeys", {
       userId: userId,
       key: hashedKey,
+      keyLookup,
       prefix,
-      name: args.name,
+      name: trimmedName,
       createdAt: Date.now(),
       isActive: true,
     });
@@ -54,7 +52,7 @@ export const create = mutation({
     return {
       id: keyId,
       key: apiKey,
-      name: args.name,
+      name: trimmedName,
       createdAt: Date.now(),
     };
   },
@@ -79,6 +77,7 @@ export const list = query({
       createdAt: key.createdAt,
       lastUsedAt: key.lastUsedAt,
       isActive: key.isActive,
+      legacyInvalidatedAt: key.legacyInvalidatedAt ?? null,
       identifier: key.prefix ?? `${key.key.slice(0, 12)}...`,
     }));
   },

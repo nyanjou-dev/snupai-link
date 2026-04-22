@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { consumeRateLimit } from "./rateLimitLib";
 
 const SLUG_RE = /^[a-zA-Z0-9_-]+$/;
 const AUTO_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
@@ -15,9 +16,17 @@ const QUOTA_WINDOW_MS = 5 * 60 * 60 * 1000; // 5 hours
 const QUOTA_DEFAULT_LINKS = 25;
 
 function randomSlug(length = 6) {
+  // Uniform pick from a 31-char alphabet using CSPRNG bytes + rejection sampling.
+  // Math.random leaks PRNG state; for slugs that gate private links this matters.
+  const alphabetLen = AUTO_ALPHABET.length;
+  const threshold = Math.floor(256 / alphabetLen) * alphabetLen; // 248 for len=31
   let out = "";
-  for (let i = 0; i < length; i++) {
-    out += AUTO_ALPHABET[Math.floor(Math.random() * AUTO_ALPHABET.length)];
+  while (out.length < length) {
+    const buf = new Uint8Array((length - out.length) * 2);
+    crypto.getRandomValues(buf);
+    for (let i = 0; i < buf.length && out.length < length; i++) {
+      if (buf[i] < threshold) out += AUTO_ALPHABET[buf[i] % alphabetLen];
+    }
   }
   return out;
 }
@@ -206,10 +215,20 @@ export const remove = mutation({
 export const getBySlug = query({
   args: { slug: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const link = await ctx.db
       .query("links")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .first();
+    if (!link) return null;
+    // Public projection: never expose `userId` / ownership graph to anonymous
+    // clients via slug enumeration.
+    return {
+      _id: link._id,
+      url: link.url,
+      expiresAt: link.expiresAt,
+      maxClicks: link.maxClicks,
+      clickCount: link.clickCount ?? link.clicks ?? 0,
+    };
   },
 });
 
@@ -218,6 +237,7 @@ export const trackClick = mutation({
     slug: v.string(),
     referrer: v.optional(v.string()),
     userAgent: v.optional(v.string()),
+    ip: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const link = await ctx.db
@@ -240,14 +260,47 @@ export const trackClick = mutation({
       return { ok: false as const, reason: "max_clicks" as const };
     }
 
-    const referrerDomain = normalizeReferrerDomain(args.referrer);
+    // Sliding-window rate limits. Failures do NOT increment the click count
+    // or insert a clickEvent row, so an attacker can't burn through maxClicks
+    // or pollute analytics by looping on the redirect endpoint.
+    const ipKey = args.ip && args.ip.length > 0 ? args.ip : "unknown";
+    const ipLimit = await consumeRateLimit(ctx, {
+      kind: "redirect:ip",
+      key: ipKey,
+      windowMs: 60_000,
+      max: 60,
+    });
+    if (!ipLimit.allowed) {
+      return {
+        ok: false as const,
+        reason: "rate_limited" as const,
+        retryAfterMs: ipLimit.retryAfterMs,
+      };
+    }
+    const slugLimit = await consumeRateLimit(ctx, {
+      kind: "redirect:slug",
+      key: args.slug,
+      windowMs: 5_000,
+      max: 30,
+    });
+    if (!slugLimit.allowed) {
+      return {
+        ok: false as const,
+        reason: "rate_limited" as const,
+        retryAfterMs: slugLimit.retryAfterMs,
+      };
+    }
+
+    const referrerDomain = normalizeReferrerDomain(args.referrer).slice(0, 256);
+    const truncatedUa =
+      typeof args.userAgent === "string" ? args.userAgent.slice(0, 256) : undefined;
 
     try {
       await ctx.db.insert("clickEvents", {
         linkId: link._id,
         createdAt: now,
         referrer: referrerDomain,
-        ua: args.userAgent,
+        ua: truncatedUa,
       });
     } catch {
       // Best-effort analytics capture; redirect flow should still work.

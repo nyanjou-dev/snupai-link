@@ -10,12 +10,15 @@
 
 import type * as admin from "../admin.js";
 import type * as api_ from "../api.js";
+import type * as apiKeyHash from "../apiKeyHash.js";
+import type * as apiKeyMigration from "../apiKeyMigration.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as auth from "../auth.js";
 import type * as authMaintenance from "../authMaintenance.js";
 import type * as http from "../http.js";
 import type * as links from "../links.js";
-import type * as openidDiscovery from "../openidDiscovery.js";
+import type * as otpThrottle from "../otpThrottle.js";
+import type * as rateLimitLib from "../rateLimitLib.js";
 import type * as session from "../session.js";
 
 import type {
@@ -27,12 +30,15 @@ import type {
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   api: typeof api_;
+  apiKeyHash: typeof apiKeyHash;
+  apiKeyMigration: typeof apiKeyMigration;
   apiKeys: typeof apiKeys;
   auth: typeof auth;
   authMaintenance: typeof authMaintenance;
   http: typeof http;
   links: typeof links;
-  openidDiscovery: typeof openidDiscovery;
+  otpThrottle: typeof otpThrottle;
+  rateLimitLib: typeof rateLimitLib;
   session: typeof session;
 }>;
 
