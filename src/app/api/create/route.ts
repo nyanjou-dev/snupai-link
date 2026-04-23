@@ -16,9 +16,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!slug || typeof slug !== "string") {
+    if (slug !== undefined && typeof slug !== "string") {
       return NextResponse.json(
-        { error: "Missing or invalid slug" },
+        { error: "Invalid slug" },
         { status: 400 }
       );
     }
@@ -30,8 +30,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate slug format (alphanumeric, hyphens, underscores)
-    if (!/^[a-zA-Z0-9-_]+$/.test(slug)) {
+    const normalizedSlug =
+      typeof slug === "string" && slug.trim().length > 0 ? slug.trim() : undefined;
+
+    // Validate slug format (alphanumeric, hyphens, underscores) when provided
+    if (normalizedSlug && !/^[a-zA-Z0-9-_]+$/.test(normalizedSlug)) {
       return NextResponse.json(
         { error: "Slug must contain only letters, numbers, hyphens, and underscores" },
         { status: 400 }
@@ -73,7 +76,7 @@ export async function POST(request: NextRequest) {
     // Call Convex mutation
     const result = await fetchMutation(api.api.createLink, {
       apiKey,
-      slug,
+      slug: normalizedSlug,
       url,
       expiresAt: expiresAt ?? undefined,
       maxClicks: maxClicks ?? undefined,

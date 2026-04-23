@@ -4,6 +4,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { Doc } from "./_generated/dataModel";
 import { constantTimeEqual, keyLookupHex, sha256Hex } from "./apiKeyHash";
 import { consumeRateLimit } from "./rateLimitLib";
+import { generateUniqueSlug } from "./slugGen";
 
 // Rate limit configuration (burst)
 const RATE_LIMIT_WINDOW = 5000; // 5 seconds
@@ -30,7 +31,7 @@ async function findApiKey(
 export const createLink = mutation({
   args: {
     apiKey: v.string(),
-    slug: v.string(),
+    slug: v.optional(v.string()),
     url: v.string(),
     expiresAt: v.optional(v.number()),
     maxClicks: v.optional(v.number()),
@@ -81,16 +82,6 @@ export const createLink = mutation({
       lastUsedAt: now,
     });
 
-    // Validate slug is unique
-    const existing = await ctx.db
-      .query("links")
-      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
-      .unique();
-
-    if (existing) {
-      throw new Error("Slug already exists");
-    }
-
     // Validate URL
     try {
       new URL(args.url);
@@ -98,9 +89,22 @@ export const createLink = mutation({
       throw new Error("Invalid URL");
     }
 
+    const trimmed = args.slug?.trim();
+    let finalSlug: string;
+    if (trimmed) {
+      const existing = await ctx.db
+        .query("links")
+        .withIndex("by_slug", (q) => q.eq("slug", trimmed))
+        .unique();
+      if (existing) throw new Error("Slug already exists");
+      finalSlug = trimmed;
+    } else {
+      finalSlug = await generateUniqueSlug(ctx);
+    }
+
     // Create the link
     const linkId = await ctx.db.insert("links", {
-      slug: args.slug,
+      slug: finalSlug,
       url: args.url,
       userId: key.userId,
       createdAt: now,
@@ -111,9 +115,9 @@ export const createLink = mutation({
 
     return {
       id: linkId,
-      slug: args.slug,
+      slug: finalSlug,
       url: args.url,
-      shortUrl: `${process.env.SITE_URL || "https://snupai.link"}/${args.slug}`,
+      shortUrl: `${process.env.SITE_URL || "https://snupai.link"}/${finalSlug}`,
       rateLimitRemaining: rateLimit.remaining,
     };
   },

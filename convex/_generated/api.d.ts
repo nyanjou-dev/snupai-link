@@ -20,6 +20,7 @@ import type * as links from "../links.js";
 import type * as otpThrottle from "../otpThrottle.js";
 import type * as rateLimitLib from "../rateLimitLib.js";
 import type * as session from "../session.js";
+import type * as slugGen from "../slugGen.js";
 
 import type {
   ApiFromModules,
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   otpThrottle: typeof otpThrottle;
   rateLimitLib: typeof rateLimitLib;
   session: typeof session;
+  slugGen: typeof slugGen;
 }>;
 
 /**

@@ -2,11 +2,9 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { consumeRateLimit } from "./rateLimitLib";
+import { generateUniqueSlug } from "./slugGen";
 
 const SLUG_RE = /^[a-zA-Z0-9_-]+$/;
-const AUTO_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
-const AUTO_MIN_LEN = 3;
-const AUTO_MAX_LEN = 8;
 const DIRECT_UNKNOWN_REFERRER = "direct/unknown";
 const MIN_MAX_CLICKS = 1;
 const MAX_MAX_CLICKS = 1_000_000;
@@ -14,22 +12,6 @@ const MIN_EXPIRY_MS_FROM_NOW = 60_000; // 1 minute
 const MAX_EXPIRY_MS_FROM_NOW = 5 * 365 * 24 * 60 * 60 * 1000; // 5 years
 const QUOTA_WINDOW_MS = 5 * 60 * 60 * 1000; // 5 hours
 const QUOTA_DEFAULT_LINKS = 25;
-
-function randomSlug(length = 6) {
-  // Uniform pick from a 31-char alphabet using CSPRNG bytes + rejection sampling.
-  // Math.random leaks PRNG state; for slugs that gate private links this matters.
-  const alphabetLen = AUTO_ALPHABET.length;
-  const threshold = Math.floor(256 / alphabetLen) * alphabetLen; // 248 for len=31
-  let out = "";
-  while (out.length < length) {
-    const buf = new Uint8Array((length - out.length) * 2);
-    crypto.getRandomValues(buf);
-    for (let i = 0; i < buf.length && out.length < length; i++) {
-      if (buf[i] < threshold) out += AUTO_ALPHABET[buf[i] % alphabetLen];
-    }
-  }
-  return out;
-}
 
 function normalizeReferrerDomain(referrer?: string) {
   if (!referrer) return DIRECT_UNKNOWN_REFERRER;
@@ -132,26 +114,7 @@ export const create = mutation({
 
       finalSlug = customSlug;
     } else {
-      // Auto-generate a unique slug (prefer short slugs first).
-      let generated: string | null = null;
-
-      for (let len = AUTO_MIN_LEN; len <= AUTO_MAX_LEN && !generated; len++) {
-        // Try a handful per length before going longer.
-        for (let i = 0; i < 12; i++) {
-          const candidate = randomSlug(len);
-          const existing = await ctx.db
-            .query("links")
-            .withIndex("by_slug", (q) => q.eq("slug", candidate))
-            .first();
-          if (!existing) {
-            generated = candidate;
-            break;
-          }
-        }
-      }
-
-      if (!generated) throw new Error("Could not generate unique slug. Please try again.");
-      finalSlug = generated;
+      finalSlug = await generateUniqueSlug(ctx);
     }
 
     return await ctx.db.insert("links", {
