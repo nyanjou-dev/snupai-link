@@ -186,6 +186,37 @@ export const getBySlug = query({
   },
 });
 
+// Read-only redirect decision for social-crawler previews. Mirrors the
+// validity checks in `trackClick` (slug lookup, owner ban, expiry, max
+// clicks) but performs NO rate limiting, click increment, or analytics write
+// — so bots fetching a preview cannot exhaust a capped link or pollute stats.
+export const getRedirectTarget = query({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    const link = await ctx.db
+      .query("links")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .first();
+    if (!link) return { ok: false as const, reason: "not_found" as const };
+
+    const owner = await ctx.db.get(link.userId);
+    if (owner?.banned) return { ok: false as const, reason: "suspended" as const };
+
+    const now = Date.now();
+    if (typeof link.expiresAt === "number" && now > link.expiresAt) {
+      return { ok: false as const, reason: "expired" as const };
+    }
+    if (
+      typeof link.maxClicks === "number" &&
+      (link.clickCount ?? 0) >= link.maxClicks
+    ) {
+      return { ok: false as const, reason: "max_clicks" as const };
+    }
+
+    return { ok: true as const, url: link.url };
+  },
+});
+
 export const trackClick = mutation({
   args: {
     slug: v.string(),

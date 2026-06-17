@@ -29,43 +29,27 @@ function isSocialCrawler(userAgent: string | null): boolean {
 const STRICT_CSP =
   "default-src 'none'; img-src https:; style-src 'unsafe-inline'; script-src 'none'; base-uri 'none'; form-action 'none'";
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ slug: string }> },
-) {
-  const { slug } = await params;
+function unavailableRedirectUrl(req: NextRequest, reason: string): URL {
+  return new URL(`/unavailable?reason=${reason}`, req.url);
+}
 
+// Renders the OG-tag HTML for social-crawler previews. No click is counted
+// for crawler hits, so bots cannot exhaust a capped link.
+async function serveCrawlerPreview(
+  req: NextRequest,
+  slug: string,
+): Promise<Response> {
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
   if (!convexUrl) {
     return new Response("Missing NEXT_PUBLIC_CONVEX_URL", { status: 500 });
   }
 
   const client = new ConvexHttpClient(convexUrl);
-
-  const referrer = req.headers.get("referer") ?? undefined;
-  const userAgent = req.headers.get("user-agent") ?? undefined;
-  const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    req.headers.get("x-real-ip") ||
-    undefined;
-
-  const result = await client.mutation(api.links.trackClick, {
-    slug,
-    referrer,
-    userAgent,
-    ip,
-  });
+  const result = await client.query(api.links.getRedirectTarget, { slug });
 
   if (!result.ok) {
     if (result.reason === "not_found") {
       return new Response("Not found", { status: 404 });
-    }
-    if (result.reason === "rate_limited") {
-      const retryAfter = Math.ceil((result.retryAfterMs ?? 60_000) / 1000);
-      return new Response("Too many requests", {
-        status: 429,
-        headers: { "Retry-After": String(retryAfter) },
-      });
     }
     const reasonMap: Record<string, string> = {
       max_clicks: "max-clicks",
@@ -73,20 +57,13 @@ export async function GET(
       suspended: "suspended",
     };
     const reason = reasonMap[result.reason] ?? "expired";
-    const unavailableUrl = new URL(`/unavailable?reason=${reason}`, req.url);
-    return Response.redirect(unavailableUrl.toString(), 302);
+    return Response.redirect(unavailableRedirectUrl(req, reason).toString(), 302);
   }
 
-  const targetUrl = result.url;
-
-  if (!isSocialCrawler(userAgent ?? null)) {
-    return Response.redirect(targetUrl, 302);
-  }
-
-  // Crawler branch: extract OG tags via the SSRF-hardened fetcher and serve
-  // a minimal HTML response. Every interpolated value is HTML-escaped; the
-  // response is served under a strict per-route CSP that forbids scripts.
-  const og = await fetchOgMeta(targetUrl);
+  // Extract OG tags via the SSRF-hardened fetcher and serve a minimal HTML
+  // response. Every interpolated value is HTML-escaped; the response is
+  // served under a strict per-route CSP that forbids scripts.
+  const og = await fetchOgMeta(result.url);
 
   const ogMetaLines: string[] = [];
   let pageTitle = slug;
@@ -105,7 +82,7 @@ export async function GET(
   }
 
   const escapedTitle = escapeHtml(pageTitle);
-  const escapedRefresh = escapeHtml(targetUrl);
+  const escapedRefresh = escapeHtml(result.url);
 
   const body = `<!DOCTYPE html>
 <html lang="en">
@@ -130,4 +107,60 @@ ${ogMetaLines.join("\n")}
       "Referrer-Policy": "no-referrer",
     },
   });
+}
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ slug: string }> },
+) {
+  const { slug } = await params;
+  const userAgent = req.headers.get("user-agent");
+
+  // Bots get the OG preview without consuming a click. Humans get the normal
+  // redirect + click-tracking path.
+  if (isSocialCrawler(userAgent)) {
+    return serveCrawlerPreview(req, slug);
+  }
+
+  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+  if (!convexUrl) {
+    return new Response("Missing NEXT_PUBLIC_CONVEX_URL", { status: 500 });
+  }
+
+  const client = new ConvexHttpClient(convexUrl);
+
+  const referrer = req.headers.get("referer") ?? undefined;
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    undefined;
+
+  const result = await client.mutation(api.links.trackClick, {
+    slug,
+    referrer,
+    userAgent: userAgent ?? undefined,
+    ip,
+  });
+
+  if (!result.ok) {
+    if (result.reason === "not_found") {
+      return new Response("Not found", { status: 404 });
+    }
+    if (result.reason === "rate_limited") {
+      const retryAfter = Math.ceil((result.retryAfterMs ?? 60_000) / 1000);
+      return new Response("Too many requests", {
+        status: 429,
+        headers: { "Retry-After": String(retryAfter) },
+      });
+    }
+    const reasonMap: Record<string, string> = {
+      max_clicks: "max-clicks",
+      expired: "expired",
+      suspended: "suspended",
+    };
+    const reason = reasonMap[result.reason] ?? "expired";
+    return Response.redirect(unavailableRedirectUrl(req, reason).toString(), 302);
+  }
+
+  return Response.redirect(result.url, 302);
 }
