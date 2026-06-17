@@ -43,7 +43,7 @@ export async function GET(
       errorCorrectionLevel: "M",
     });
 
-    return new Response(qrBuffer as any, {
+    return new Response(new Uint8Array(qrBuffer), {
       headers: {
         "Content-Type": "image/png",
         "Cache-Control": "public, max-age=3600, immutable",

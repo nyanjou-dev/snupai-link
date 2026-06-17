@@ -11,11 +11,15 @@ const SOCIAL_CRAWLERS = [
   "facebookexternalhit",
   "linkedinbot",
   "discordbot",
+  "discord",
   "telegrambot",
   "slackbot",
+  "embedly",
   "whatsapp",
   "vkshare",
   "pinterest",
+  "mastodon",
+  "bluesky",
 ];
 
 function isSocialCrawler(userAgent: string | null): boolean {
@@ -45,44 +49,57 @@ async function serveCrawlerPreview(
   }
 
   const client = new ConvexHttpClient(convexUrl);
-  const result = await client.query(api.links.getRedirectTarget, { slug });
+  // Use the long-standing public slug lookup instead of the newer
+  // getRedirectTarget query so the frontend can be deployed before/without a
+  // matching Convex function rollout. Crawler requests still avoid the click
+  // mutation, so previews do not burn capped links or pollute analytics.
+  const link = await client.query(api.links.getBySlug, { slug });
 
-  if (!result.ok) {
-    if (result.reason === "not_found") {
-      return new Response("Not found", { status: 404 });
-    }
-    const reasonMap: Record<string, string> = {
-      max_clicks: "max-clicks",
-      expired: "expired",
-      suspended: "suspended",
-    };
-    const reason = reasonMap[result.reason] ?? "expired";
-    return Response.redirect(unavailableRedirectUrl(req, reason).toString(), 302);
+  if (!link) {
+    return new Response("Not found", { status: 404 });
+  }
+
+  const now = Date.now();
+  if (typeof link.expiresAt === "number" && now > link.expiresAt) {
+    return Response.redirect(unavailableRedirectUrl(req, "expired").toString(), 302);
+  }
+  if (
+    typeof link.maxClicks === "number" &&
+    (link.clickCount ?? 0) >= link.maxClicks
+  ) {
+    return Response.redirect(unavailableRedirectUrl(req, "max-clicks").toString(), 302);
   }
 
   // Extract OG tags via the SSRF-hardened fetcher and serve a minimal HTML
   // response. Every interpolated value is HTML-escaped; the response is
   // served under a strict per-route CSP that forbids scripts.
-  const og = await fetchOgMeta(result.url);
+  const og = await fetchOgMeta(link.url);
+
+  // If the target blocks server-side metadata scraping (Amazon often does from
+  // cloud hosts), do not return an empty HTML page. Let the crawler follow the
+  // real target URL instead. Discord follows redirects for embeds, and this is
+  // closer to the behavior of posting the long link directly than suppressing
+  // the embed with a blank preview response.
+  if (!og) {
+    return Response.redirect(link.url, 302);
+  }
 
   const ogMetaLines: string[] = [];
   let pageTitle = slug;
 
-  if (og) {
-    for (const p of og.properties) {
-      const attr = p.kind === "property" ? "property" : "name";
-      ogMetaLines.push(
-        `  <meta ${attr}="${escapeHtml(p.key)}" content="${escapeHtml(p.value)}">`,
-      );
-      if (p.kind === "property" && p.key === "og:title" && pageTitle === slug) {
-        pageTitle = p.value;
-      }
+  for (const p of og.properties) {
+    const attr = p.kind === "property" ? "property" : "name";
+    ogMetaLines.push(
+      `  <meta ${attr}="${escapeHtml(p.key)}" content="${escapeHtml(p.value)}">`,
+    );
+    if (p.kind === "property" && p.key === "og:title" && pageTitle === slug) {
+      pageTitle = p.value;
     }
-    if (og.title && pageTitle === slug) pageTitle = og.title;
   }
+  if (og.title && pageTitle === slug) pageTitle = og.title;
 
   const escapedTitle = escapeHtml(pageTitle);
-  const escapedRefresh = escapeHtml(result.url);
+  const escapedRefresh = escapeHtml(link.url);
 
   const body = `<!DOCTYPE html>
 <html lang="en">

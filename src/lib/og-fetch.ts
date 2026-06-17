@@ -3,7 +3,11 @@ import { hostnameResolvesToPrivate } from "./private-ip";
 
 const MAX_BYTES = 512 * 1024;
 const MAX_VALUE_LEN = 500;
-const FETCH_TIMEOUT_MS = 3000;
+// Discord's crawler has a short overall link-preview budget. This fetcher may
+// try two user agents, and the route still needs a Convex lookup, so keep each
+// remote metadata attempt intentionally short. If both attempts fail, the route
+// falls back to a plain redirect so Discord can crawl the original URL itself.
+const FETCH_TIMEOUT_MS = 1500;
 const MAX_REDIRECTS = 5;
 
 // Honest bot UA first; many sites serve real metadata to declared bots.

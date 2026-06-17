@@ -3,7 +3,7 @@
 import { useConvexAuth, useQuery, useMutation } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "../../convex/_generated/api";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Id } from "../../convex/_generated/dataModel";
 import { ClickDetails } from "./ClickDetails";
 import { ApiKeysSection } from "./ApiKeysSection";
@@ -454,6 +454,7 @@ function DashboardQuotaBar({
   remaining: number;
   resetsAt: number | null;
 }) {
+  const [now, setNow] = useState(() => Date.now());
   const pct = Math.min(100, (used / limit) * 100);
   const isNearLimit = remaining <= 3 && remaining > 0;
   const isExhausted = remaining === 0;
@@ -463,6 +464,11 @@ function DashboardQuotaBar({
     : isNearLimit
       ? "bg-ctp-peach"
       : "bg-ctp-mauve";
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   return (
     <div className="bg-ctp-mantle/50 rounded-xl px-4 py-3 space-y-2">
@@ -476,7 +482,7 @@ function DashboardQuotaBar({
         <span className="text-ctp-overlay1">
           {isExhausted
             ? resetsAt
-              ? `Next slot in ${formatTimeRemaining(resetsAt - Date.now())}`
+              ? `Next slot in ${formatTimeRemaining(resetsAt - now)}`
               : "Quota full"
             : `${remaining} remaining`}
         </span>

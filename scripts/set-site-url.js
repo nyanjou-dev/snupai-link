@@ -17,6 +17,9 @@
  *   - VERCEL_ENV: "production", "preview", or "development" (auto-set by Vercel)
  */
 
+// This file is intentionally CommonJS so it can run under the package's
+// current non-ESM Node configuration.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { execFileSync } = require("child_process");
 
 function getSiteUrl() {

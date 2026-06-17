@@ -5,16 +5,6 @@ import { api } from "../../convex/_generated/api";
 import { useState, useEffect } from "react";
 import { Id } from "../../convex/_generated/dataModel";
 
-interface ApiKey {
-  id: Id<"apiKeys">;
-  name: string;
-  createdAt: number;
-  lastUsedAt: number | null;
-  isActive: boolean;
-  legacyInvalidatedAt: number | null;
-  identifier: string;
-}
-
 function formatTimeRemaining(ms: number) {
   if (ms <= 0) return "now";
   const hours = Math.floor(ms / (60 * 60 * 1000));
@@ -26,7 +16,7 @@ function formatTimeRemaining(ms: number) {
 type QuotaData = NonNullable<ReturnType<typeof useQuery<typeof api.api.quotaStatus>>>;
 
 function QuotaBar({ quota }: { quota: QuotaData }) {
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   const pct = Math.min(100, (quota.used / quota.limit) * 100);
   const isNearLimit = quota.remaining <= 3 && quota.remaining > 0;
   const isExhausted = quota.remaining === 0;

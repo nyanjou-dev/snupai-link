@@ -83,10 +83,12 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(result, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("API error:", error);
 
-    const errorMessage = error?.message || "Internal server error";
+    const errorMessage = error instanceof Error && error.message
+      ? error.message
+      : "Internal server error";
 
     // Handle specific errors
     if (errorMessage.includes("Account suspended")) {
